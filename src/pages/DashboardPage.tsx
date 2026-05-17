@@ -126,7 +126,7 @@ export default function DashboardPage() {
           <NavItem icon={<Home className="h-4 w-4" />} label="Overview" active={activeNav === "home"} onClick={() => setActiveNav("home")} />
           <NavItem icon={<Map className="h-4 w-4" />} label="Roadmap" active={activeNav === "roadmap"} onClick={() => setActiveNav("roadmap")} />
           <NavItem icon={<FileText className="h-4 w-4" />} label="Konten" active={activeNav === "konten"} onClick={() => { setActiveNav("konten"); }} />
-          <NavItem icon={<BarChart3 className="h-4 w-4" />} label="Analitik" active={activeNav === "analitik"} onClick={() => userPlan !== "free" ? navigate("/analytics") : setShowPricing(true)} locked={userPlan === "free"} />
+          <NavItem icon={<BarChart3 className="h-4 w-4" />} label="Analitik" active={activeNav === "analitik"} onClick={() => userPlan !== "free" ? setActiveNav("analitik") : setShowPricing(true)} locked={userPlan === "free"} />
           <NavItem icon={<Users className="h-4 w-4" />} label="Audiens" active={activeNav === "audiens"} onClick={() => userPlan !== "free" ? setActiveNav("audiens") : setShowPricing(true)} locked={userPlan === "free"} />
           <NavItem icon={<Gauge className="h-4 w-4" />} label="KPI Tracker" active={activeNav === "kpi"} onClick={() => userPlan !== "free" ? setActiveNav("kpi") : setShowPricing(true)} locked={userPlan === "free"} />
           <NavItem icon={<Lightbulb className="h-4 w-4" />} label="Insight" active={activeNav === "insight"} onClick={() => userPlan !== "free" ? setActiveNav("insight") : setShowPricing(true)} locked={userPlan === "free"} />
@@ -266,6 +266,9 @@ export default function DashboardPage() {
 
           {/* Insight View (Pro) */}
           {activeNav === "insight" && <InsightView feedback={fbVals} weeks={weeks} weekData={Object.values(weeks)} />}
+
+          {/* Analitik View (Pro) */}
+          {activeNav === "analitik" && <AnalitikInline strategyId={strategyId} />}
 
           {/* Roadmap View */}
           {activeNav === "roadmap" && strategy && <RoadmapView strategy={strategy} weeks={weeks} completedWeeks={completedWeeks} totalWeeksAvailable={totalWeeksAvailable} />}
@@ -499,6 +502,59 @@ function RoadmapView({ strategy, weeks, completedWeeks, totalWeeksAvailable }: {
           );
         })}
       </div>
+    </div>
+  );
+}
+
+function AnalitikInline({ strategyId }: { strategyId: string | null }) {
+  const [loading, setLoading] = useState(true);
+  const [weekData, setWeekData] = useState<WeekPlan[]>([]);
+  const [feedbackData, setFeedbackData] = useState<Feedback[]>([]);
+
+  useEffect(() => {
+    if (!strategyId) { setLoading(false); return; }
+    (async () => {
+      const [{ data: w }, { data: f }] = await Promise.all([
+        supabase.from("weeks").select("week_number, data").eq("strategy_id", strategyId).order("week_number"),
+        supabase.from("feedback").select("week_number, day, slot, likes, comments, messages, conversions, note").eq("strategy_id", strategyId),
+      ]);
+      setWeekData((w ?? []).map((x: any) => x.data));
+      setFeedbackData((f ?? []) as any);
+      setLoading(false);
+    })();
+  }, [strategyId]);
+
+  if (loading) return <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>;
+
+  const totals = feedbackData.reduce((a: any, f: any) => ({ posts: a.posts + 1, likes: a.likes + f.likes, comments: a.comments + f.comments, messages: a.messages + f.messages, conversions: a.conversions + f.conversions }), { posts: 0, likes: 0, comments: 0, messages: 0, conversions: 0 });
+  const totalPosts = weekData.reduce((s, w) => s + (w?.days?.reduce((a: number, d: any) => a + (d.posts?.length ?? 0), 0) ?? 0), 0);
+  const avgEng = totals.posts > 0 ? Math.round((totals.likes + totals.comments + totals.messages) / totals.posts) : 0;
+
+  const formatCounts: Record<string, number> = {};
+  weekData.forEach((w: any) => w?.days?.forEach((d: any) => d.posts?.forEach((p: any) => { formatCounts[p.format || "Lainnya"] = (formatCounts[p.format || "Lainnya"] ?? 0) + 1; })));
+  const sorted = Object.entries(formatCounts).sort((a, b) => b[1] - a[1]);
+
+  return (
+    <div className="space-y-4">
+      <h2 className="text-lg font-bold flex items-center gap-2"><BarChart3 className="h-5 w-5 text-primary" />Analitik</h2>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <Card className="p-4"><p className="text-xs text-muted-foreground">Konten</p><p className="text-2xl font-bold">{totalPosts}</p></Card>
+        <Card className="p-4"><p className="text-xs text-muted-foreground">Likes</p><p className="text-2xl font-bold text-rose-500">{totals.likes}</p></Card>
+        <Card className="p-4"><p className="text-xs text-muted-foreground">Avg Engagement</p><p className="text-2xl font-bold text-primary">{avgEng}</p></Card>
+        <Card className="p-4"><p className="text-xs text-muted-foreground">Konversi</p><p className="text-2xl font-bold text-emerald-500">{totals.conversions}</p></Card>
+      </div>
+      {sorted.length > 0 && <Card className="p-5"><p className="text-xs font-semibold uppercase text-muted-foreground mb-3">Format Distribution</p>
+        <div className="space-y-2">{sorted.slice(0, 6).map(([fmt, count], i) => <div key={i} className="flex items-center gap-3"><span className="text-xs w-24 truncate">{fmt}</span><div className="flex-1 h-2.5 rounded-full bg-muted overflow-hidden"><div className="h-full rounded-full" style={{ width: `${(count / (sorted[0][1])) * 100}%`, background: ["#6366f1","#f59e0b","#10b981","#ef4444","#8b5cf6","#06b6d4"][i % 6] }} /></div><span className="text-xs text-muted-foreground font-medium">{count}</span></div>)}</div>
+      </Card>}
+      {totals.posts > 0 && <Card className="p-5"><p className="text-xs font-semibold uppercase text-muted-foreground mb-3">Performa Detail</p>
+        <div className="grid grid-cols-2 gap-3">
+          <div><p className="text-xs text-muted-foreground">Total DM</p><p className="text-xl font-bold">{totals.messages}</p></div>
+          <div><p className="text-xs text-muted-foreground">Total Komentar</p><p className="text-xl font-bold">{totals.comments}</p></div>
+          <div><p className="text-xs text-muted-foreground">Conversion Rate</p><p className="text-xl font-bold">{totals.posts > 0 ? ((totals.conversions / totals.posts) * 100).toFixed(1) : 0}%</p></div>
+          <div><p className="text-xs text-muted-foreground">Konten Tercatat</p><p className="text-xl font-bold">{totals.posts}</p></div>
+        </div>
+      </Card>}
+      {totals.posts === 0 && <Card className="p-8 text-center"><p className="text-muted-foreground">Catat performa konten di tab Konten untuk melihat analitik.</p></Card>}
     </div>
   );
 }
