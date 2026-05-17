@@ -4,7 +4,7 @@ import { join, extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
-const PORT = parseInt(process.env.PORT || '8080', 10);
+const PORT = parseInt(process.env.PORT || '3000', 10);
 
 // Import the TanStack Start server entry
 const serverModule = await import('./dist/server/server.js');
