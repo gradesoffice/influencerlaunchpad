@@ -155,24 +155,24 @@ export default function DashboardPage() {
             <div className="flex items-center gap-3"><Bell className="h-5 w-5 text-muted-foreground" /><Link to="/strategies"><FileText className="h-5 w-5 text-muted-foreground" /></Link><Button size="sm" variant="outline" className="gap-2 text-primary border-primary/30" onClick={() => setShowPricing(true)}><Crown className="h-4 w-4" />Upgrade</Button></div>
           </div>
 
-          {/* Plan limit warning - only show for free */}
-          {userPlan === "free" && <div className="flex items-center justify-between rounded-lg bg-rose-50 border border-rose-200 px-4 py-2.5 mb-6">
+          {/* Plan limit warning - only show for free on home */}
+          {userPlan === "free" && activeNav === "home" && <div className="flex items-center justify-between rounded-lg bg-rose-50 border border-rose-200 px-4 py-2.5 mb-6">
             <p className="text-sm text-rose-700">⚠️ Plan kamu hanya sampai minggu 1. Upgrade untuk akses lebih.</p>
             <Button size="sm" className="bg-primary text-primary-foreground shrink-0" onClick={() => setShowPricing(true)}>Upgrade Sekarang</Button>
           </div>}
 
-          {/* KPI Cards */}
-          <Card className="p-5 mb-6">
+          {/* KPI Cards - only on home */}
+          {activeNav === "home" && <Card className="p-5 mb-6">
             <div className="flex items-center justify-between mb-3"><p className="text-sm font-semibold">KPI Utama Minggu Ini</p><p className="text-xs text-muted-foreground">Periode: Minggu {completedWeeks || 1}</p></div>
             <div className="grid grid-cols-3 gap-4">
               <div className="flex items-center gap-3"><div className="h-10 w-10 rounded-lg bg-rose-100 flex items-center justify-center"><Heart className="h-5 w-5 text-rose-500" /></div><div><p className="text-xs text-muted-foreground">Likes</p><p className="text-xl font-bold">{totalLikes}</p></div></div>
               <div className="flex items-center gap-3"><div className="h-10 w-10 rounded-lg bg-violet-100 flex items-center justify-center"><TrendingUp className="h-5 w-5 text-violet-500" /></div><div><p className="text-xs text-muted-foreground">Reach</p><p className="text-xl font-bold">{progressPct}% <span className="text-xs text-emerald-500">↑</span></p></div></div>
               <div className="flex items-center gap-3"><div className="h-10 w-10 rounded-lg bg-emerald-100 flex items-center justify-center"><Send className="h-5 w-5 text-emerald-500" /></div><div><p className="text-xs text-muted-foreground">DM / Hari</p><p className="text-xl font-bold">{totalDM}</p></div></div>
             </div>
-          </Card>
+          </Card>}
 
-          {/* Phases */}
-          {strategy.phases.map((phase, pi) => {
+          {/* Phases - only show on home/konten */}
+          {(activeNav === "home" || activeNav === "konten") && strategy.phases.map((phase, pi) => {
             const weekOffset = strategy.phases.slice(0, pi).reduce((s, p) => s + p.weeklyThemes.length, 0);
             return (
               <div key={pi} className="mb-8">
