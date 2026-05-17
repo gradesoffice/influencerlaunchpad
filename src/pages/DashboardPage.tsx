@@ -74,6 +74,7 @@ export default function DashboardPage() {
 
   const generateStrategy = async () => {
     if (!form.niche || !form.audience || !form.message || !form.conversionGoal) { toast.error("Lengkapi semua field."); return; }
+    if (strategy && !confirm("Buat strategi baru? Strategi lama tetap tersimpan di halaman Strategi.")) return;
     setLoadingStrategy(true); setStrategy(null); setStrategyId(null); setWeeks({}); setFeedback({});
     try {
       const headers = await getAuthHeaders();
@@ -151,7 +152,7 @@ export default function DashboardPage() {
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
             <div><p className="text-sm text-muted-foreground">Hai, {userName || form.niche.split(" ")[0]} 👋</p><h1 className="text-xl md:text-2xl font-bold">Yuk, bangun brand yang dipercaya.</h1><p className="text-xs text-muted-foreground mt-0.5">Rencana konten terstruktur untuk hasil maksimal.</p></div>
-            <div className="flex items-center gap-3"><Bell className="h-5 w-5 text-muted-foreground" /><Button size="sm" variant="outline" className="gap-2 text-primary border-primary/30" onClick={() => setShowPricing(true)}><Crown className="h-4 w-4" />Upgrade</Button></div>
+            <div className="flex items-center gap-3"><Bell className="h-5 w-5 text-muted-foreground" /><Link to="/strategies"><FileText className="h-5 w-5 text-muted-foreground" /></Link><Button size="sm" variant="outline" className="gap-2 text-primary border-primary/30" onClick={() => setShowPricing(true)}><Crown className="h-4 w-4" />Upgrade</Button></div>
           </div>
 
           {/* Plan limit warning - only show for free */}
@@ -276,7 +277,7 @@ export default function DashboardPage() {
         <div className="flex items-center justify-around">
           <button onClick={() => setActiveNav("home")} className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg ${activeNav === "home" ? "text-primary" : "text-muted-foreground"}`}><Home className="h-5 w-5" /><span className="text-[10px]">Home</span></button>
           <button onClick={() => setActiveNav("roadmap")} className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg ${activeNav === "roadmap" ? "text-primary" : "text-muted-foreground"}`}><Map className="h-5 w-5" /><span className="text-[10px]">Roadmap</span></button>
-          <button onClick={() => navigate("/analytics")} className="flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg text-muted-foreground"><BarChart3 className="h-5 w-5" /><span className="text-[10px]">Analitik</span></button>
+          <button onClick={() => userPlan !== "free" ? navigate("/analytics") : setShowPricing(true)} className="flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg text-muted-foreground"><BarChart3 className="h-5 w-5" /><span className="text-[10px]">Analitik</span>{userPlan === "free" && <span className="text-[8px] text-muted-foreground/50">Pro</span>}</button>
           <button onClick={() => setShowPricing(true)} className="flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg text-muted-foreground"><Crown className="h-5 w-5 text-amber-500" /><span className="text-[10px]">Upgrade</span></button>
         </div>
       </div>
