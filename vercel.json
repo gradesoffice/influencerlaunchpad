@@ -1,21 +1,8 @@
 {
   "version": 2,
-  "buildCommand": "npm run build",
-  "builds": [
-    {
-      "src": "package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "dist/client"
-      }
-    },
-    {
-      "src": "api/index.mjs",
-      "use": "@vercel/node"
+  "functions": {
+    "api/*.ts": {
+      "maxDuration": 60
     }
-  ],
-  "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/index.mjs" },
-    { "source": "/((?!assets/|favicon).*)", "destination": "/index.html" }
-  ]
+  }
 }
