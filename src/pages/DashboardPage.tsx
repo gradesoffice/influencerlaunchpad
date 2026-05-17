@@ -239,6 +239,18 @@ export default function DashboardPage() {
         </div>
       </main>
 
+      {/* Mobile bottom nav */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-border px-2 py-2 z-20">
+        <div className="flex items-center justify-around">
+          <button onClick={() => setActiveNav("home")} className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg ${activeNav === "home" ? "text-primary" : "text-muted-foreground"}`}><Home className="h-5 w-5" /><span className="text-[10px]">Home</span></button>
+          <button onClick={() => setActiveNav("roadmap")} className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg ${activeNav === "roadmap" ? "text-primary" : "text-muted-foreground"}`}><Map className="h-5 w-5" /><span className="text-[10px]">Roadmap</span></button>
+          <button onClick={() => navigate("/analytics")} className="flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg text-muted-foreground"><BarChart3 className="h-5 w-5" /><span className="text-[10px]">Analitik</span></button>
+          <button onClick={() => setShowPricing(true)} className="flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg text-muted-foreground"><Crown className="h-5 w-5 text-amber-500" /><span className="text-[10px]">Upgrade</span></button>
+        </div>
+      </div>
+      {/* Mobile bottom spacer */}
+      <div className="md:hidden h-16" />
+
       {/* Pricing Modal */}
       {showPricing && <PricingModal onClose={() => setShowPricing(false)} onUpgrade={() => { setShowPricing(false); navigate("/pricing"); }} />}
     </div>
