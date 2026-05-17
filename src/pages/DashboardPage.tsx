@@ -140,106 +140,75 @@ export default function DashboardPage() {
 
       {/* Main */}
       <main className="flex-1 p-4 md:p-8 overflow-y-auto">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-4xl mx-auto space-y-6">
           {/* Header - minimal */}
-          <div className="flex items-center justify-between mb-6">
-            <div><p className="text-sm font-semibold">{userName || form.niche.split(" ")[0]} 👋</p></div>
-            <div className="flex items-center gap-2">
-              <button onClick={() => setShowForm(true)} title="Edit Strategi"><Settings className="h-5 w-5 text-muted-foreground hover:text-primary transition" /></button>
-              <button onClick={() => setShowPricing(true)} title="Upgrade"><Crown className="h-5 w-5 text-amber-500" /></button>
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-semibold">{userName || form.niche.split(" ")[0]} 👋</p>
+            <div className="flex items-center gap-3">
+              <button onClick={() => setShowForm(true)} title="Edit"><Settings className="h-5 w-5 text-muted-foreground/60 hover:text-primary transition" /></button>
+              <button onClick={() => setShowPricing(true)} title="Upgrade"><Crown className="h-5 w-5 text-amber-400" /></button>
             </div>
           </div>
 
-          {/* Plan limit warning - only show for free on home */}
-          {userPlan === "free" && activeNav === "home" && <div className="flex items-center justify-between rounded-lg bg-rose-50 border border-rose-200 px-4 py-2.5 mb-6">
-            <p className="text-sm text-rose-700">⚠️ Plan kamu hanya sampai minggu 1. Upgrade untuk akses lebih.</p>
-            <Button size="sm" className="bg-primary text-primary-foreground shrink-0" onClick={() => setShowPricing(true)}>Upgrade Sekarang</Button>
+          {/* Plan warning - subtle */}
+          {userPlan === "free" && activeNav === "home" && <button onClick={() => setShowPricing(true)} className="w-full text-left rounded-2xl bg-rose-50/80 px-4 py-3 flex items-center gap-3"><span className="text-sm">⚡</span><p className="text-xs text-rose-600 flex-1">Upgrade untuk akses penuh</p><ChevronRight className="h-4 w-4 text-rose-400" /></button>}
+
+          {/* KPI - clean, borderless */}
+          {activeNav === "home" && <div className="grid grid-cols-3 gap-3">
+            <div className="rounded-2xl bg-white p-4 text-center shadow-sm"><Heart className="h-5 w-5 text-rose-400 mx-auto mb-1" /><p className="text-lg font-bold">{totalLikes}</p><p className="text-[10px] text-muted-foreground">Likes</p></div>
+            <div className="rounded-2xl bg-white p-4 text-center shadow-sm"><TrendingUp className="h-5 w-5 text-violet-400 mx-auto mb-1" /><p className="text-lg font-bold">{progressPct}%</p><p className="text-[10px] text-muted-foreground">Progress</p></div>
+            <div className="rounded-2xl bg-white p-4 text-center shadow-sm"><Send className="h-5 w-5 text-emerald-400 mx-auto mb-1" /><p className="text-lg font-bold">{totalDM}</p><p className="text-[10px] text-muted-foreground">DM</p></div>
           </div>}
 
-          {/* KPI Cards - only on home */}
-          {activeNav === "home" && <Card className="p-5 mb-6">
-            <div className="flex items-center justify-between mb-3"><p className="text-sm font-semibold">KPI Utama Minggu Ini</p><p className="text-xs text-muted-foreground">Periode: Minggu {completedWeeks || 1}</p></div>
-            <div className="grid grid-cols-3 gap-4">
-              <div className="flex items-center gap-3"><div className="h-10 w-10 rounded-lg bg-rose-100 flex items-center justify-center"><Heart className="h-5 w-5 text-rose-500" /></div><div><p className="text-xs text-muted-foreground">Likes</p><p className="text-xl font-bold">{totalLikes}</p></div></div>
-              <div className="flex items-center gap-3"><div className="h-10 w-10 rounded-lg bg-violet-100 flex items-center justify-center"><TrendingUp className="h-5 w-5 text-violet-500" /></div><div><p className="text-xs text-muted-foreground">Reach</p><p className="text-xl font-bold">{progressPct}% <span className="text-xs text-emerald-500">↑</span></p></div></div>
-              <div className="flex items-center gap-3"><div className="h-10 w-10 rounded-lg bg-emerald-100 flex items-center justify-center"><Send className="h-5 w-5 text-emerald-500" /></div><div><p className="text-xs text-muted-foreground">DM / Hari</p><p className="text-xl font-bold">{totalDM}</p></div></div>
-            </div>
-          </Card>}
-
-          {/* Phases - only show on home/konten */}
+          {/* Phases - clean */}
           {(activeNav === "home" || activeNav === "konten") && strategy.phases.map((phase, pi) => {
             const weekOffset = strategy.phases.slice(0, pi).reduce((s, p) => s + p.weeklyThemes.length, 0);
             return (
-              <div key={pi} className="mb-8">
-                <div className="flex items-center justify-between mb-4">
-                  <div><p className="text-xs font-semibold uppercase text-primary">Phase {pi + 1} · {phase.days}</p><h2 className="text-lg font-bold">{phase.name}</h2><p className="text-xs text-muted-foreground">{phase.objective}</p></div>
-                  <p className="text-xs text-primary font-medium">Minggu {weekOffset + 1}–{weekOffset + phase.weeklyThemes.length}</p>
+              <div key={pi} className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-semibold uppercase text-primary">Phase {pi + 1} · {phase.name}</p>
+                  <p className="text-[10px] text-muted-foreground">W{weekOffset + 1}–{weekOffset + phase.weeklyThemes.length}</p>
                 </div>
 
-                {/* Week list */}
-                <div className="space-y-3">
-                  {phase.weeklyThemes.map((theme, wi) => {
-                    const wn = weekOffset + wi + 1;
-                    const done = !!weeks[wn];
-                    const isOpen = openWeek === wn;
-                    return (
-                      <div key={wi}>
-                        <Card className={`p-4 cursor-pointer hover:shadow-md transition ${isOpen ? "ring-1 ring-primary" : ""}`} onClick={() => done ? setOpenWeek(isOpen ? null : wn) : generateWeek(wn, phase.name, theme)}>
-                          <div className="flex items-center gap-4">
-                            <div className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold shrink-0 ${done ? "bg-primary text-primary-foreground" : "bg-rose-100 text-rose-600"}`}>W{wn}</div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-xs text-muted-foreground">Minggu {wn} · Hari {(wn-1)*7+1}–{wn*7}</p>
-                              <p className="font-semibold text-sm truncate">{theme}</p>
-                            </div>
-                            <div className="flex items-center gap-2 shrink-0">
-                              {done && <Badge variant="outline" className="text-[10px]">KPI: {phase.kpis[0]}</Badge>}
-                              {loadingWeek === wn ? <Loader2 className="h-4 w-4 animate-spin text-primary" /> : done ? <ChevronRight className="h-4 w-4" /> : <Button size="sm" variant="outline" className="text-xs text-primary border-primary/30 gap-1"><Sparkles className="h-3 w-3" />Generate</Button>}
-                            </div>
+                {phase.weeklyThemes.map((theme, wi) => {
+                  const wn = weekOffset + wi + 1;
+                  const done = !!weeks[wn];
+                  const isOpen = openWeek === wn;
+                  return (
+                    <div key={wi}>
+                      <button onClick={() => done ? setOpenWeek(isOpen ? null : wn) : generateWeek(wn, phase.name, theme)} className={`w-full rounded-2xl bg-white p-4 shadow-sm flex items-center gap-3 text-left transition hover:shadow-md ${isOpen ? "ring-2 ring-primary/20" : ""}`}>
+                        <div className={`h-9 w-9 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${done ? "bg-primary text-white" : "bg-muted text-muted-foreground"}`}>{loadingWeek === wn ? <Loader2 className="h-4 w-4 animate-spin" /> : done ? <Check className="h-4 w-4" /> : wn}</div>
+                        <div className="flex-1 min-w-0"><p className="text-sm font-medium truncate">{theme}</p><p className="text-[10px] text-muted-foreground">Hari {(wn-1)*7+1}–{wn*7}</p></div>
+                        {!done && <Sparkles className="h-4 w-4 text-primary/50 shrink-0" />}
+                      </button>
+
+                      {isOpen && weeks[wn] && <div className="mt-2 space-y-2 pl-12">
+                        {weeks[wn].days.map((d, di) => (
+                          <div key={di}>
+                            {d.posts.map((post, pi2) => {
+                              const fkey = `${wn}|${d.day}|${post.slot}`;
+                              const isCopied = copiedKey === fkey;
+                              const fbOpen = openFeedback === fkey;
+                              const fb = feedback[fkey];
+                              return (
+                                <div key={pi2} className="rounded-xl bg-white/80 p-3 mb-2 shadow-sm">
+                                  <div className="flex items-center gap-2 mb-1"><Badge variant="secondary" className="text-[9px] border-0">{post.format}</Badge></div>
+                                  <p className="text-sm font-medium">🪝 {post.hook}</p>
+                                  <p className="text-[11px] text-muted-foreground mt-1 line-clamp-1">{post.caption}</p>
+                                  <div className="flex gap-2 mt-2">
+                                    <button onClick={(e) => { e.stopPropagation(); copyPost(fkey, post); }} className="text-[10px] text-muted-foreground hover:text-primary">{isCopied ? "✓ Copied" : "📋 Copy"}</button>
+                                    <button onClick={(e) => { e.stopPropagation(); setOpenFeedback(fbOpen ? null : fkey); }} className="text-[10px] text-muted-foreground hover:text-primary">📊 Track</button>
+                                  </div>
+                                  {fbOpen && <div className="mt-2 grid grid-cols-4 gap-1"><MI icon="❤️" value={fb?.likes ?? 0} onChange={v => updateFeedback(fkey, { likes: v })} /><MI icon="💬" value={fb?.comments ?? 0} onChange={v => updateFeedback(fkey, { comments: v })} /><MI icon="📩" value={fb?.messages ?? 0} onChange={v => updateFeedback(fkey, { messages: v })} /><MI icon="🛒" value={fb?.conversions ?? 0} onChange={v => updateFeedback(fkey, { conversions: v })} /></div>}
+                                </div>
+                              );
+                            })}
                           </div>
-                        </Card>
-
-                        {/* Expanded week */}
-                        {isOpen && weeks[wn] && (
-                          <Card className="mt-2 p-4 bg-white border-l-4 border-l-primary">
-                            <p className="text-xs text-muted-foreground mb-3"><strong>Fokus:</strong> {weeks[wn].focus}</p>
-                            {weeks[wn].days.map((d, di) => (
-                              <div key={di} className="mb-3 last:mb-0">
-                                <p className="text-xs font-semibold text-primary mb-1">Hari {d.day}</p>
-                                {d.posts.map((post, pi2) => {
-                                  const fkey = `${wn}|${d.day}|${post.slot}`;
-                                  const fb = feedback[fkey]; const isCopied = copiedKey === fkey; const fbOpen = openFeedback === fkey;
-                                  return (
-                                    <div key={pi2} className="rounded-lg border border-border p-3 mb-2 bg-[#faf9f7]">
-                                      <div className="flex items-center gap-2 mb-1"><Badge variant="secondary" className="text-[10px]">{post.format}</Badge><Badge variant="outline" className="text-[10px]">{post.slot}</Badge></div>
-                                      <p className="text-sm font-semibold">🪝 {post.hook}</p>
-                                      <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{post.caption}</p>
-                                      <p className="text-xs mt-1"><strong>CTA:</strong> {post.cta}</p>
-                                      <div className="flex gap-2 mt-2">
-                                        <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); copyPost(fkey, post); }} className="h-6 text-[10px] px-2">{isCopied ? "✓" : "Salin"}</Button>
-                                        <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); setOpenFeedback(fbOpen ? null : fkey); }} className="h-6 text-[10px] px-2">Performa</Button>
-                                      </div>
-                                      {fbOpen && <div className="mt-2 grid grid-cols-4 gap-1"><MI icon="❤️" value={fb?.likes ?? 0} onChange={v => updateFeedback(fkey, { likes: v })} /><MI icon="💬" value={fb?.comments ?? 0} onChange={v => updateFeedback(fkey, { comments: v })} /><MI icon="📩" value={fb?.messages ?? 0} onChange={v => updateFeedback(fkey, { messages: v })} /><MI icon="🛒" value={fb?.conversions ?? 0} onChange={v => updateFeedback(fkey, { conversions: v })} /></div>}
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            ))}
-                          </Card>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Phase KPI badges */}
-                <div className="flex gap-3 mt-4 overflow-x-auto">
-                  {phase.kpis.map((k, i) => (
-                    <div key={i} className="flex items-center gap-2 rounded-lg border border-border bg-white px-3 py-2 shrink-0">
-                      <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${i === 0 ? "bg-rose-100" : i === 1 ? "bg-violet-100" : "bg-emerald-100"}`}><TrendingUp className={`h-4 w-4 ${i === 0 ? "text-rose-500" : i === 1 ? "text-violet-500" : "text-emerald-500"}`} /></div>
-                      <div><p className="text-[10px] text-muted-foreground">KPI {i + 1}</p><p className="text-xs font-medium">{k}</p></div>
+                        ))}
+                      </div>}
                     </div>
-                  ))}
-                </div>
+                  );
+                })}
               </div>
             );
           })}
@@ -270,17 +239,17 @@ export default function DashboardPage() {
         </div>
       </main>
 
-      {/* Mobile bottom nav */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-border px-2 py-2 z-20">
+      {/* Mobile bottom nav - clean */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-lg border-t border-border/50 px-4 py-2 z-20">
         <div className="flex items-center justify-around">
-          <button onClick={() => setActiveNav("home")} className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg ${activeNav === "home" ? "text-primary" : "text-muted-foreground"}`}><Home className="h-5 w-5" /><span className="text-[10px]">Home</span></button>
-          <button onClick={() => setActiveNav("roadmap")} className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg ${activeNav === "roadmap" ? "text-primary" : "text-muted-foreground"}`}><Map className="h-5 w-5" /><span className="text-[10px]">Roadmap</span></button>
-          <button onClick={() => userPlan !== "free" ? navigate("/analytics") : setShowPricing(true)} className="flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg text-muted-foreground"><BarChart3 className="h-5 w-5" /><span className="text-[10px]">Analitik</span>{userPlan === "free" && <span className="text-[8px] text-muted-foreground/50">Pro</span>}</button>
-          <button onClick={() => setShowPricing(true)} className="flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg text-muted-foreground"><Crown className="h-5 w-5 text-amber-500" /><span className="text-[10px]">Upgrade</span></button>
+          <button onClick={() => setActiveNav("home")} className={`p-2 rounded-xl transition ${activeNav === "home" ? "text-primary bg-primary/10" : "text-muted-foreground"}`}><Home className="h-5 w-5" /></button>
+          <button onClick={() => setActiveNav("roadmap")} className={`p-2 rounded-xl transition ${activeNav === "roadmap" ? "text-primary bg-primary/10" : "text-muted-foreground"}`}><Map className="h-5 w-5" /></button>
+          <button onClick={() => setActiveNav("konten")} className={`p-2 rounded-xl transition ${activeNav === "konten" ? "text-primary bg-primary/10" : "text-muted-foreground"}`}><FileText className="h-5 w-5" /></button>
+          <button onClick={() => userPlan !== "free" ? setActiveNav("analitik") : setShowPricing(true)} className={`p-2 rounded-xl transition ${activeNav === "analitik" ? "text-primary bg-primary/10" : "text-muted-foreground/50"}`}><BarChart3 className="h-5 w-5" /></button>
+          <button onClick={() => setShowPricing(true)} className="p-2 rounded-xl text-amber-400"><Crown className="h-5 w-5" /></button>
         </div>
       </div>
-      {/* Mobile bottom spacer */}
-      <div className="md:hidden h-16" />
+      <div className="md:hidden h-14" />
 
       {/* Pricing Modal */}
       {showPricing && <PricingModal onClose={() => setShowPricing(false)} onUpgrade={() => { setShowPricing(false); navigate("/pricing"); }} />}
