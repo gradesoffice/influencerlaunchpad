@@ -119,40 +119,35 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-[#faf9f7] flex">
       <Toaster richColors position="top-center" />
 
-      {/* Sidebar */}
-      <aside className="hidden md:flex w-56 flex-col border-r border-border bg-white p-5 sticky top-0 h-screen">
-        <div className="flex items-center gap-2 mb-8"><div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center"><Rocket className="h-4 w-4 text-primary" /></div><span className="font-bold text-sm">Influencer<br/>Launchpad</span></div>
-        <nav className="space-y-1 flex-1">
-          <NavItem icon={<Home className="h-4 w-4" />} label="Overview" active={activeNav === "home"} onClick={() => setActiveNav("home")} />
-          <NavItem icon={<Map className="h-4 w-4" />} label="Roadmap" active={activeNav === "roadmap"} onClick={() => setActiveNav("roadmap")} />
-          <NavItem icon={<FileText className="h-4 w-4" />} label="Konten" active={activeNav === "konten"} onClick={() => { setActiveNav("konten"); }} />
-          <NavItem icon={<BarChart3 className="h-4 w-4" />} label="Analitik" active={activeNav === "analitik"} onClick={() => userPlan !== "free" ? setActiveNav("analitik") : setShowPricing(true)} locked={userPlan === "free"} />
-          <NavItem icon={<Users className="h-4 w-4" />} label="Audiens" active={activeNav === "audiens"} onClick={() => userPlan !== "free" ? setActiveNav("audiens") : setShowPricing(true)} locked={userPlan === "free"} />
-          <NavItem icon={<Gauge className="h-4 w-4" />} label="KPI Tracker" active={activeNav === "kpi"} onClick={() => userPlan !== "free" ? setActiveNav("kpi") : setShowPricing(true)} locked={userPlan === "free"} />
-          <NavItem icon={<Lightbulb className="h-4 w-4" />} label="Insight" active={activeNav === "insight"} onClick={() => userPlan !== "free" ? setActiveNav("insight") : setShowPricing(true)} locked={userPlan === "free"} />
+      {/* Sidebar - icon focused */}
+      <aside className="hidden md:flex w-16 flex-col items-center border-r border-border bg-white py-5 sticky top-0 h-screen">
+        <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center mb-6"><Rocket className="h-5 w-5 text-primary" /></div>
+        <nav className="space-y-2 flex-1">
+          <SideIcon icon={<Home className="h-5 w-5" />} active={activeNav === "home"} onClick={() => setActiveNav("home")} tooltip="Overview" />
+          <SideIcon icon={<Map className="h-5 w-5" />} active={activeNav === "roadmap"} onClick={() => setActiveNav("roadmap")} tooltip="Roadmap" />
+          <SideIcon icon={<FileText className="h-5 w-5" />} active={activeNav === "konten"} onClick={() => setActiveNav("konten")} tooltip="Konten" />
+          <SideIcon icon={<BarChart3 className="h-5 w-5" />} active={activeNav === "analitik"} onClick={() => userPlan !== "free" ? setActiveNav("analitik") : setShowPricing(true)} tooltip="Analitik" locked={userPlan === "free"} />
+          <SideIcon icon={<Users className="h-5 w-5" />} active={activeNav === "audiens"} onClick={() => userPlan !== "free" ? setActiveNav("audiens") : setShowPricing(true)} tooltip="Audiens" locked={userPlan === "free"} />
+          <SideIcon icon={<Gauge className="h-5 w-5" />} active={activeNav === "kpi"} onClick={() => userPlan !== "free" ? setActiveNav("kpi") : setShowPricing(true)} tooltip="KPI" locked={userPlan === "free"} />
+          <SideIcon icon={<Lightbulb className="h-5 w-5" />} active={activeNav === "insight"} onClick={() => userPlan !== "free" ? setActiveNav("insight") : setShowPricing(true)} tooltip="Insight" locked={userPlan === "free"} />
         </nav>
-        {/* Usage info */}
-        <div className="border-t border-border pt-4 mt-4">
-          <p className="text-xs text-muted-foreground mb-1">Generate hari ini</p>
-          <p className="text-3xl font-bold text-primary">{completedWeeks}<span className="text-sm font-normal text-muted-foreground"> minggu</span></p>
-          <div className="h-1.5 rounded-full bg-muted mt-2 overflow-hidden"><div className="h-full bg-primary rounded-full" style={{ width: `${progressPct}%` }} /></div>
-          <Badge className="mt-3 bg-primary/10 text-primary border-0">{userPlan === "free" ? "Free Plan" : userPlan === "pro" ? "Pro Plan" : "Business"}</Badge>
+        <div className="space-y-3 mt-4 pt-4 border-t border-border">
+          <SideIcon icon={<Crown className="h-5 w-5 text-amber-500" />} active={false} onClick={() => setShowPricing(true)} tooltip="Upgrade" />
+          <SideIcon icon={<FileText className="h-5 w-5" />} active={false} onClick={() => navigate("/strategies")} tooltip="Strategi" />
+          <button onClick={handleLogout} className="h-9 w-9 rounded-full bg-muted flex items-center justify-center text-xs font-bold hover:ring-2 ring-primary/20 transition" title="Logout">{(userName || "U")[0].toUpperCase()}</button>
         </div>
-        {/* Profile */}
-        <button onClick={handleLogout} className="flex items-center gap-3 mt-4 pt-4 border-t border-border w-full text-left">
-          <div className="h-9 w-9 rounded-full bg-muted flex items-center justify-center text-xs font-bold">{(userName || "U")[0].toUpperCase()}</div>
-          <div className="flex-1 min-w-0"><p className="text-sm font-medium truncate">{userName || "User"}</p><p className="text-xs text-muted-foreground">Logout</p></div>
-          <ChevronRight className="h-4 w-4 text-muted-foreground" />
-        </button>
       </aside>
 
       {/* Main */}
       <main className="flex-1 p-4 md:p-8 overflow-y-auto">
         <div className="max-w-4xl mx-auto">
-          {/* Header */}
+          {/* Header - minimal */}
           <div className="flex items-center justify-between mb-6">
-            <div><p className="text-sm text-muted-foreground">Hai, {userName || form.niche.split(" ")[0]} 👋</p><h1 className="text-xl md:text-2xl font-bold">Yuk, bangun brand yang dipercaya.</h1><p className="text-xs text-muted-foreground mt-0.5">Rencana konten terstruktur untuk hasil maksimal.</p></div>
-            <div className="flex items-center gap-3"><Bell className="h-5 w-5 text-muted-foreground" /><Link to="/strategies"><FileText className="h-5 w-5 text-muted-foreground" /></Link><Button size="sm" variant="outline" className="gap-2 text-primary border-primary/30" onClick={() => setShowPricing(true)}><Crown className="h-4 w-4" />Upgrade</Button></div>
+            <div><p className="text-sm font-semibold">{userName || form.niche.split(" ")[0]} 👋</p></div>
+            <div className="flex items-center gap-2">
+              <button onClick={() => setShowForm(true)} title="Edit Strategi"><Settings className="h-5 w-5 text-muted-foreground hover:text-primary transition" /></button>
+              <button onClick={() => setShowPricing(true)} title="Upgrade"><Crown className="h-5 w-5 text-amber-500" /></button>
+            </div>
           </div>
 
           {/* Plan limit warning - only show for free on home */}
@@ -294,6 +289,10 @@ export default function DashboardPage() {
 }
 
 // === Sub-components ===
+function SideIcon({ icon, active, onClick, tooltip, locked }: { icon: React.ReactNode; active: boolean; onClick: () => void; tooltip: string; locked?: boolean }) {
+  return <button onClick={onClick} title={tooltip} className={`relative h-10 w-10 rounded-xl flex items-center justify-center transition ${active ? "bg-primary/10 text-primary" : locked ? "text-muted-foreground/40" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}>{icon}{locked && <span className="absolute -top-0.5 -right-0.5 h-3 w-3 rounded-full bg-amber-400 border-2 border-white" />}</button>;
+}
+
 function NavItem({ icon, label, active, onClick, locked }: { icon: React.ReactNode; label: string; active: boolean; onClick: () => void; locked?: boolean }) {
   return <button onClick={onClick} className={`flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm transition ${active ? "bg-primary/10 text-primary font-medium" : locked ? "text-muted-foreground/50 cursor-pointer" : "text-muted-foreground hover:bg-muted"}`}>{icon}<span className="flex-1 text-left">{label}</span>{locked && <Badge variant="outline" className="text-[9px] px-1.5 py-0 border-muted-foreground/30 text-muted-foreground/50">Pro</Badge>}</button>;
 }
