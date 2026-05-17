@@ -17,7 +17,11 @@ export const Route = createFileRoute("/")({
       { name: "description", content: "Generate strategi 90 hari, brand identity konsisten, dan breakdown konten harian untuk akun media sosial kamu." },
     ],
   }),
-  beforeLoad: async () => {
+  beforeLoad: async ({ location }) => {
+    // Skip auth check if URL has hash (OAuth callback with token)
+    if (typeof window !== 'undefined' && window.location.hash.includes('access_token')) {
+      return;
+    }
     const { supabase } = await import("@/integrations/supabase/client");
     const { data } = await supabase.auth.getSession();
     if (!data.session) {
