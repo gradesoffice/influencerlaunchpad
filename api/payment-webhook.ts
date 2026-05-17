@@ -14,7 +14,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const plan = planRaw === 'pro' ? 'pro' : planRaw === 'business' ? 'business' : null;
     if (!plan) return res.status(200).json({ status: 'invalid order' });
 
-    const db = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!);
+    const db = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_PUBLISHABLE_KEY!);
     const { data: planRow } = await db.from('user_plans').select('user_id').eq('midtrans_order_id', order_id).single();
     if (!planRow) return res.status(200).json({ status: 'order not found' });
 
