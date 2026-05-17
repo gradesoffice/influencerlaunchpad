@@ -19,6 +19,13 @@ const MIME_TYPES = {
 const server = createServer(async (req, res) => {
   const url = new URL(req.url, `http://localhost:${PORT}`);
 
+  // Health check
+  if (url.pathname === '/healthz') {
+    res.writeHead(200, { 'Content-Type': 'text/plain' });
+    res.end('ok');
+    return;
+  }
+
   // Serve static files from dist/client
   const staticPath = join(__dirname, 'dist', 'client', url.pathname);
   if (url.pathname !== '/' && existsSync(staticPath)) {
@@ -52,12 +59,16 @@ const server = createServer(async (req, res) => {
     const buf = Buffer.from(await response.arrayBuffer());
     res.end(buf);
   } catch (e) {
-    console.error('[ssr error]', e);
-    res.writeHead(500);
-    res.end('Internal Server Error');
+    console.error('[ssr error]', e?.message || e);
+    res.writeHead(500, { 'Content-Type': 'text/html' });
+    res.end('<h1>Server Error</h1><p>Please try again.</p>');
   }
 });
 
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`Server listening on http://0.0.0.0:${PORT}`);
 });
+
+// Prevent unhandled errors from crashing the process
+process.on('uncaughtException', (e) => console.error('[uncaught]', e?.message || e));
+process.on('unhandledRejection', (e) => console.error('[unhandled]', e));
