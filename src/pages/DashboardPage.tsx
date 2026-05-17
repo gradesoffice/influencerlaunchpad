@@ -251,6 +251,9 @@ export default function DashboardPage() {
 
           {/* Insight View (Pro) */}
           {activeNav === "insight" && <InsightView feedback={fbVals} weeks={weeks} weekData={Object.values(weeks)} />}
+
+          {/* Roadmap View */}
+          {activeNav === "roadmap" && strategy && <RoadmapView strategy={strategy} weeks={weeks} completedWeeks={completedWeeks} totalWeeksAvailable={totalWeeksAvailable} />}
         </div>
       </main>
 
@@ -394,6 +397,86 @@ function InsightView({ feedback, weekData }: { feedback: Feedback[]; weeks: Reco
       {sorted.length > 0 && <Card className="p-5"><p className="text-xs font-semibold uppercase text-muted-foreground mb-3">Format Distribution</p>
         <div className="space-y-2">{sorted.slice(0, 5).map(([fmt, count], i) => <div key={i} className="flex items-center gap-3"><span className="text-xs w-20 truncate">{fmt}</span><div className="flex-1 h-2 rounded-full bg-muted overflow-hidden"><div className="h-full rounded-full bg-primary" style={{ width: `${(count / (sorted[0][1])) * 100}%` }} /></div><span className="text-xs text-muted-foreground">{count}</span></div>)}</div>
       </Card>}
+    </div>
+  );
+}
+
+
+function RoadmapView({ strategy, weeks, completedWeeks, totalWeeksAvailable }: { strategy: Strategy; weeks: Record<number, WeekPlan>; completedWeeks: number; totalWeeksAvailable: number }) {
+  const currentWeek = completedWeeks + 1;
+  const milestones: Record<number, string> = { 4: "1K followers target", 8: "Mulai monetisasi", 12: "Brand deals pertama", 20: "10K followers", 30: "Full-time creator", 40: "Scale & delegate", 52: "1 tahun selesai!" };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-bold flex items-center gap-2"><Map className="h-5 w-5 text-primary" />Roadmap</h2>
+        <Badge variant="outline">{completedWeeks}/{totalWeeksAvailable} minggu</Badge>
+      </div>
+
+      {/* Timeline */}
+      <div className="relative">
+        {strategy.phases.map((phase, pi) => {
+          const weekOffset = strategy.phases.slice(0, pi).reduce((s, p) => s + p.weeklyThemes.length, 0);
+          const phaseWeeks = phase.weeklyThemes.length;
+          return (
+            <div key={pi} className="mb-8">
+              {/* Phase header */}
+              <Card className="p-4 mb-4 border-l-4 border-l-primary">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-semibold uppercase text-primary">Phase {pi + 1} · {phase.days}</p>
+                    <h3 className="font-bold">{phase.name}</h3>
+                    <p className="text-xs text-muted-foreground mt-0.5">{phase.objective}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-muted-foreground">KPI Target</p>
+                    <div className="flex flex-wrap gap-1 justify-end mt-1">{phase.kpis.slice(0, 2).map((k, i) => <Badge key={i} variant="secondary" className="text-[10px]">{k}</Badge>)}</div>
+                  </div>
+                </div>
+              </Card>
+
+              {/* Week timeline */}
+              <div className="ml-4 border-l-2 border-border pl-6 space-y-3">
+                {phase.weeklyThemes.map((theme, wi) => {
+                  const wn = weekOffset + wi + 1;
+                  const done = !!weeks[wn];
+                  const isCurrent = wn === currentWeek;
+                  const milestone = milestones[wn];
+                  return (
+                    <div key={wi} className="relative">
+                      {/* Dot on timeline */}
+                      <div className={`absolute -left-[31px] top-2 h-4 w-4 rounded-full border-2 ${done ? "bg-primary border-primary" : isCurrent ? "bg-white border-primary ring-4 ring-primary/20" : "bg-muted border-border"}`}>
+                        {done && <Check className="h-2.5 w-2.5 text-white absolute top-0.5 left-0.5" />}
+                      </div>
+
+                      {/* Current indicator */}
+                      {isCurrent && <div className="absolute -left-[70px] top-1 text-[10px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded">KAMU</div>}
+
+                      {/* Week card */}
+                      <div className={`rounded-lg border p-3 ${isCurrent ? "border-primary bg-primary/5" : done ? "border-border bg-white" : "border-border/50 bg-muted/30"}`}>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-xs text-muted-foreground">Minggu {wn} · Hari {(wn-1)*7+1}–{wn*7}</p>
+                            <p className={`text-sm font-medium ${done ? "" : "text-muted-foreground"}`}>{theme}</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {done && <Badge className="bg-emerald-100 text-emerald-700 text-[10px]">✅ Selesai</Badge>}
+                            {isCurrent && <Badge className="bg-primary text-primary-foreground text-[10px]">🔄 Aktif</Badge>}
+                            {!done && !isCurrent && <Badge variant="outline" className="text-[10px] text-muted-foreground">⬜ Belum</Badge>}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Milestone */}
+                      {milestone && <div className="mt-2 ml-2 flex items-center gap-2"><span className="text-xs">🏆</span><p className="text-xs font-medium text-amber-700 bg-amber-50 px-2 py-0.5 rounded">{milestone}</p></div>}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
