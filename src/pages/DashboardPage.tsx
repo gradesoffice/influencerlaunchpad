@@ -105,10 +105,10 @@ export default function DashboardPage() {
           <NavItem icon={<Home className="h-4 w-4" />} label="Overview" active={activeNav === "home"} onClick={() => setActiveNav("home")} />
           <NavItem icon={<Map className="h-4 w-4" />} label="Roadmap" active={activeNav === "roadmap"} onClick={() => setActiveNav("roadmap")} />
           <NavItem icon={<FileText className="h-4 w-4" />} label="Konten" active={activeNav === "konten"} onClick={() => { setActiveNav("konten"); if (Object.keys(weeks).length) setOpenWeek(Number(Object.keys(weeks)[0])); }} />
-          <NavItem icon={<BarChart3 className="h-4 w-4" />} label="Analitik" active={false} onClick={() => navigate("/analytics")} />
-          <NavItem icon={<Users className="h-4 w-4" />} label="Audiens" active={false} onClick={() => {}} />
-          <NavItem icon={<Gauge className="h-4 w-4" />} label="KPI Tracker" active={false} onClick={() => {}} />
-          <NavItem icon={<Lightbulb className="h-4 w-4" />} label="Insight" active={false} onClick={() => navigate("/analytics")} />
+          <NavItem icon={<BarChart3 className="h-4 w-4" />} label="Analitik" active={false} onClick={() => navigate("/analytics")} locked />
+          <NavItem icon={<Users className="h-4 w-4" />} label="Audiens" active={false} onClick={() => setShowPricing(true)} locked />
+          <NavItem icon={<Gauge className="h-4 w-4" />} label="KPI Tracker" active={false} onClick={() => setShowPricing(true)} locked />
+          <NavItem icon={<Lightbulb className="h-4 w-4" />} label="Insight" active={false} onClick={() => setShowPricing(true)} locked />
         </nav>
         {/* Save count */}
         <div className="border-t border-border pt-4 mt-4">
@@ -258,8 +258,8 @@ export default function DashboardPage() {
 }
 
 // === Sub-components ===
-function NavItem({ icon, label, active, onClick }: { icon: React.ReactNode; label: string; active: boolean; onClick: () => void }) {
-  return <button onClick={onClick} className={`flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm transition ${active ? "bg-primary/10 text-primary font-medium" : "text-muted-foreground hover:bg-muted"}`}>{icon}{label}</button>;
+function NavItem({ icon, label, active, onClick, locked }: { icon: React.ReactNode; label: string; active: boolean; onClick: () => void; locked?: boolean }) {
+  return <button onClick={onClick} className={`flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm transition ${active ? "bg-primary/10 text-primary font-medium" : locked ? "text-muted-foreground/50 cursor-pointer" : "text-muted-foreground hover:bg-muted"}`}>{icon}<span className="flex-1 text-left">{label}</span>{locked && <Badge variant="outline" className="text-[9px] px-1.5 py-0 border-muted-foreground/30 text-muted-foreground/50">Pro</Badge>}</button>;
 }
 
 function MI({ icon, value, onChange }: { icon: string; value: number; onChange: (v: number) => void }) {
