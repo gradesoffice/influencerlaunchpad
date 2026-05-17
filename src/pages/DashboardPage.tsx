@@ -33,6 +33,7 @@ export default function DashboardPage() {
   const [showPricing, setShowPricing] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [activeNav, setActiveNav] = useState("home");
+  const [userPlan, setUserPlan] = useState<"free" | "pro" | "business">("free");
 
   useEffect(() => { loadFromDb(); }, []);
   const loadFromDb = async () => {
@@ -46,6 +47,11 @@ export default function DashboardPage() {
         const { data: savedFb } = await supabase.from("feedback").select("week_number, day, slot, likes, comments, messages, conversions, note").eq("strategy_id", s.id);
         if (savedFb?.length) { const m: Record<string, Feedback> = {}; savedFb.forEach(f => m[`${f.week_number}|${f.day}|${f.slot}`] = f); setFeedback(m); }
       } else { setShowForm(true); }
+      // Load user plan
+      const { data: planRow } = await supabase.from("user_plans").select("plan, expires_at").limit(1).single();
+      if (planRow && (!planRow.expires_at || new Date(planRow.expires_at) > new Date())) {
+        setUserPlan(planRow.plan as any);
+      }
     } catch (e) { console.error(e); }
     setInitialLoading(false);
   };
@@ -105,17 +111,17 @@ export default function DashboardPage() {
           <NavItem icon={<Home className="h-4 w-4" />} label="Overview" active={activeNav === "home"} onClick={() => setActiveNav("home")} />
           <NavItem icon={<Map className="h-4 w-4" />} label="Roadmap" active={activeNav === "roadmap"} onClick={() => setActiveNav("roadmap")} />
           <NavItem icon={<FileText className="h-4 w-4" />} label="Konten" active={activeNav === "konten"} onClick={() => { setActiveNav("konten"); if (Object.keys(weeks).length) setOpenWeek(Number(Object.keys(weeks)[0])); }} />
-          <NavItem icon={<BarChart3 className="h-4 w-4" />} label="Analitik" active={false} onClick={() => navigate("/analytics")} locked />
-          <NavItem icon={<Users className="h-4 w-4" />} label="Audiens" active={false} onClick={() => setShowPricing(true)} locked />
-          <NavItem icon={<Gauge className="h-4 w-4" />} label="KPI Tracker" active={false} onClick={() => setShowPricing(true)} locked />
-          <NavItem icon={<Lightbulb className="h-4 w-4" />} label="Insight" active={false} onClick={() => setShowPricing(true)} locked />
+          <NavItem icon={<BarChart3 className="h-4 w-4" />} label="Analitik" active={activeNav === "analitik"} onClick={() => userPlan !== "free" ? navigate("/analytics") : setShowPricing(true)} locked={userPlan === "free"} />
+          <NavItem icon={<Users className="h-4 w-4" />} label="Audiens" active={activeNav === "audiens"} onClick={() => userPlan !== "free" ? setActiveNav("audiens") : setShowPricing(true)} locked={userPlan === "free"} />
+          <NavItem icon={<Gauge className="h-4 w-4" />} label="KPI Tracker" active={activeNav === "kpi"} onClick={() => userPlan !== "free" ? setActiveNav("kpi") : setShowPricing(true)} locked={userPlan === "free"} />
+          <NavItem icon={<Lightbulb className="h-4 w-4" />} label="Insight" active={activeNav === "insight"} onClick={() => userPlan !== "free" ? setActiveNav("insight") : setShowPricing(true)} locked={userPlan === "free"} />
         </nav>
         {/* Save count */}
         <div className="border-t border-border pt-4 mt-4">
           <p className="text-xs text-muted-foreground mb-1">Sisa Save Count</p>
           <p className="text-3xl font-bold text-primary">100<span className="text-sm font-normal text-muted-foreground">/post</span></p>
           <div className="h-1.5 rounded-full bg-muted mt-2 overflow-hidden"><div className="h-full bg-primary rounded-full" style={{ width: "70%" }} /></div>
-          <Badge className="mt-3 bg-primary/10 text-primary border-0">Free Plan</Badge>
+          <Badge className="mt-3 bg-primary/10 text-primary border-0">{userPlan === "free" ? "Free Plan" : userPlan === "pro" ? "Pro Plan" : "Business"}</Badge>
         </div>
         {/* Profile */}
         <button onClick={handleLogout} className="flex items-center gap-3 mt-4 pt-4 border-t border-border w-full text-left">
@@ -229,13 +235,22 @@ export default function DashboardPage() {
           })}
 
           {/* Progress ring */}
-          <Card className="p-5 flex items-center justify-between">
+          {activeNav === "home" && <Card className="p-5 flex items-center justify-between">
             <div><p className="text-sm font-semibold">Progress Keseluruhan</p><p className="text-xs text-muted-foreground">{completedWeeks} dari {totalWeeksAvailable} minggu selesai</p></div>
             <div className="relative flex h-16 w-16 items-center justify-center">
               <svg className="h-16 w-16 -rotate-90"><circle cx="32" cy="32" r="26" fill="none" stroke="#f3f4f6" strokeWidth="5" /><circle cx="32" cy="32" r="26" fill="none" stroke="hsl(var(--primary))" strokeWidth="5" strokeDasharray={`${progressPct * 1.63} 163`} strokeLinecap="round" /></svg>
               <span className="absolute text-sm font-bold">{progressPct}%</span>
             </div>
-          </Card>
+          </Card>}
+
+          {/* Audiens View (Pro) */}
+          {activeNav === "audiens" && <AudiensView niche={form.niche} audience={form.audience} platform={form.platform} />}
+
+          {/* KPI Tracker View (Pro) */}
+          {activeNav === "kpi" && <KPIView feedback={fbVals} totalWeeks={completedWeeks} />}
+
+          {/* Insight View (Pro) */}
+          {activeNav === "insight" && <InsightView feedback={fbVals} weeks={weeks} weekData={Object.values(weeks)} />}
         </div>
       </main>
 
@@ -301,6 +316,84 @@ function FormView({ form, update, loading, onGenerate, onLogout }: { form: FormS
           <Button onClick={onGenerate} disabled={loading} size="lg" className="h-12 text-base font-semibold text-primary-foreground mt-2" style={{ background: "var(--gradient-hero)" }}>{loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <><Rocket className="mr-2 h-5 w-5" />Generate Roadmap</>}</Button>
         </div>
       </div>
+    </div>
+  );
+}
+
+
+function PF({ text }: { text: string }) { return <div className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-emerald-500 shrink-0" /><span>{text}</span></div>; }
+function PL({ text }: { text: string }) { return <div className="flex items-center gap-2 text-muted-foreground"><span className="h-3.5 w-3.5 shrink-0 text-center">—</span><span>{text}</span></div>; }
+
+// === PRO VIEWS ===
+function AudiensView({ niche, audience, platform }: { niche: string; audience: string; platform: string }) {
+  return (
+    <div className="space-y-4">
+      <h2 className="text-lg font-bold flex items-center gap-2"><Users className="h-5 w-5 text-emerald-500" />Audiens Kamu</h2>
+      <Card className="p-5"><p className="text-xs font-semibold uppercase text-muted-foreground mb-2">Target Audiens</p><p className="text-sm">{audience}</p></Card>
+      <div className="grid grid-cols-2 gap-3">
+        <Card className="p-4 text-center"><p className="text-xs text-muted-foreground">Platform</p><p className="text-lg font-bold">{platform}</p></Card>
+        <Card className="p-4 text-center"><p className="text-xs text-muted-foreground">Niche</p><p className="text-lg font-bold truncate">{niche}</p></Card>
+      </div>
+      <Card className="p-5"><p className="text-xs font-semibold uppercase text-muted-foreground mb-3">Rekomendasi AI</p>
+        <div className="space-y-2 text-sm">
+          <p>📌 Fokus pada pain points utama audiens kamu</p>
+          <p>📌 Gunakan bahasa yang relatable</p>
+          <p>📌 Posting di jam aktif audiens (7-9 pagi, 19-21 malam)</p>
+          <p>📌 Variasikan format: edukasi 40%, story 30%, CTA 30%</p>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+function KPIView({ feedback, totalWeeks }: { feedback: Feedback[]; totalWeeks: number }) {
+  const totals = feedback.reduce((a, f) => ({ likes: a.likes + f.likes, comments: a.comments + f.comments, messages: a.messages + f.messages, conversions: a.conversions + f.conversions }), { likes: 0, comments: 0, messages: 0, conversions: 0 });
+  const avgEng = feedback.length > 0 ? Math.round((totals.likes + totals.comments + totals.messages) / feedback.length) : 0;
+  const cr = feedback.length > 0 ? ((totals.conversions / feedback.length) * 100).toFixed(1) : "0";
+  return (
+    <div className="space-y-4">
+      <h2 className="text-lg font-bold flex items-center gap-2"><Gauge className="h-5 w-5 text-rose-500" />KPI Tracker</h2>
+      <div className="grid grid-cols-2 gap-3">
+        <Card className="p-4"><p className="text-xs text-muted-foreground">Avg Engagement</p><p className="text-2xl font-bold text-primary">{avgEng}</p></Card>
+        <Card className="p-4"><p className="text-xs text-muted-foreground">Conversion Rate</p><p className="text-2xl font-bold text-primary">{cr}%</p></Card>
+        <Card className="p-4"><p className="text-xs text-muted-foreground">Total DM</p><p className="text-2xl font-bold">{totals.messages}</p></Card>
+        <Card className="p-4"><p className="text-xs text-muted-foreground">Minggu Aktif</p><p className="text-2xl font-bold">{totalWeeks}</p></Card>
+      </div>
+      <Card className="p-5"><p className="text-xs font-semibold uppercase text-muted-foreground mb-3">Target KPI</p>
+        <div className="space-y-3">
+          <KPIBar label="Likes / Post" current={feedback.length > 0 ? Math.round(totals.likes / feedback.length) : 0} target={100} />
+          <KPIBar label="DM / Minggu" current={totals.messages} target={20} />
+          <KPIBar label="Konversi / Minggu" current={totals.conversions} target={5} />
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+function KPIBar({ label, current, target }: { label: string; current: number; target: number }) {
+  const pct = Math.min(100, Math.round((current / target) * 100));
+  return <div><div className="flex justify-between text-xs mb-1"><span>{label}</span><span className="text-muted-foreground">{current}/{target}</span></div><div className="h-2 rounded-full bg-muted overflow-hidden"><div className="h-full rounded-full bg-primary transition-all" style={{ width: `${pct}%` }} /></div></div>;
+}
+
+function InsightView({ feedback, weekData }: { feedback: Feedback[]; weeks: Record<number, WeekPlan>; weekData: WeekPlan[] }) {
+  const topFormats: Record<string, number> = {};
+  weekData.forEach(w => w.days?.forEach(d => d.posts?.forEach(p => { topFormats[p.format] = (topFormats[p.format] ?? 0) + 1; })));
+  const sorted = Object.entries(topFormats).sort((a, b) => b[1] - a[1]);
+  const totalEng = feedback.reduce((s, f) => s + f.likes + f.comments + f.messages, 0);
+  const totalConv = feedback.reduce((s, f) => s + f.conversions, 0);
+  return (
+    <div className="space-y-4">
+      <h2 className="text-lg font-bold flex items-center gap-2"><Lightbulb className="h-5 w-5 text-amber-500" />AI Insights</h2>
+      <Card className="p-5 space-y-3">
+        {sorted[0] && <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-3"><p className="text-sm text-emerald-800">✅ Format terbaik: <strong>{sorted[0][0]}</strong> ({sorted[0][1]} konten)</p></div>}
+        {sorted[1] && <div className="rounded-lg bg-blue-50 border border-blue-200 p-3"><p className="text-sm text-blue-800">💡 Coba lebih banyak <strong>{sorted[1][0]}</strong></p></div>}
+        {totalConv > 0 && <div className="rounded-lg bg-amber-50 border border-amber-200 p-3"><p className="text-sm text-amber-800">🎯 {totalConv} konversi = {((totalConv / Math.max(feedback.length, 1)) * 100).toFixed(1)}% CR</p></div>}
+        {totalEng > 0 && <div className="rounded-lg bg-violet-50 border border-violet-200 p-3"><p className="text-sm text-violet-800">📊 Avg engagement: {Math.round(totalEng / Math.max(feedback.length, 1))} per konten</p></div>}
+        <div className="rounded-lg bg-rose-50 border border-rose-200 p-3"><p className="text-sm text-rose-800">🔥 Posting konsisten setiap hari untuk bangun habit audiens</p></div>
+      </Card>
+      {sorted.length > 0 && <Card className="p-5"><p className="text-xs font-semibold uppercase text-muted-foreground mb-3">Format Distribution</p>
+        <div className="space-y-2">{sorted.slice(0, 5).map(([fmt, count], i) => <div key={i} className="flex items-center gap-3"><span className="text-xs w-20 truncate">{fmt}</span><div className="flex-1 h-2 rounded-full bg-muted overflow-hidden"><div className="h-full rounded-full bg-primary" style={{ width: `${(count / (sorted[0][1])) * 100}%` }} /></div><span className="text-xs text-muted-foreground">{count}</span></div>)}</div>
+      </Card>}
     </div>
   );
 }
