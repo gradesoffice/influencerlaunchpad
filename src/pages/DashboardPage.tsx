@@ -34,6 +34,7 @@ export default function DashboardPage() {
   const [initialLoading, setInitialLoading] = useState(true);
   const [activeNav, setActiveNav] = useState("home");
   const [userPlan, setUserPlan] = useState<"free" | "pro" | "business">("free");
+  const [userName, setUserName] = useState("");
 
   useEffect(() => { loadFromDb(); }, []);
   const loadFromDb = async () => {
@@ -52,12 +53,24 @@ export default function DashboardPage() {
       if (planRow && (!planRow.expires_at || new Date(planRow.expires_at) > new Date())) {
         setUserPlan(planRow.plan as any);
       }
+      // Load user name
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user?.user_metadata?.full_name) setUserName(user.user_metadata.full_name);
+      else if (user?.email) setUserName(user.email.split("@")[0]);
     } catch (e) { console.error(e); }
     setInitialLoading(false);
   };
   const update = <K extends keyof FormState>(k: K, v: FormState[K]) => setForm(s => ({ ...s, [k]: v }));
   const getAuthHeaders = async () => { const { data: { session } } = await supabase.auth.getSession(); const h: Record<string, string> = { "Content-Type": "application/json" }; if (session?.access_token) h["Authorization"] = `Bearer ${session.access_token}`; return h; };
   const handleLogout = async () => { await supabase.auth.signOut(); navigate("/login"); };
+
+  const buildFeedbackInsights = (): string => {
+    const entries = Object.entries(feedback).filter(([, v]) => v.likes + v.comments + v.messages + v.conversions > 0);
+    if (!entries.length) return "";
+    const enriched = entries.map(([key, v]) => { const [w, d, ...slot] = key.split("|"); const wk = weeks[Number(w)]; const day = wk?.days?.find(x => String(x.day) === d); const post = day?.posts?.find(p => p.slot === slot.join("|")); return { v, post, score: v.conversions * 5 + v.messages * 2 + v.comments * 1.5 + v.likes * 0.1 }; }).filter(x => x.post);
+    enriched.sort((a, b) => b.score - a.score);
+    return enriched.slice(0, 5).map(e => `Hook: "${e.post!.hook}" | Format: ${e.post!.format} | ${e.v.likes} likes, ${e.v.comments} komen, ${e.v.conversions} konversi`).join("\n");
+  };
 
   const generateStrategy = async () => {
     if (!form.niche || !form.audience || !form.message || !form.conversionGoal) { toast.error("Lengkapi semua field."); return; }
@@ -74,7 +87,8 @@ export default function DashboardPage() {
     try {
       const brandSummary = `Persona: ${strategy.brand.persona}\nVoice: ${strategy.brand.voice}\nTagline: ${strategy.brand.tagline}\nPillars: ${strategy.brand.contentPillars.map(p => p.name).join(", ")}`;
       const headers = await getAuthHeaders();
-      const res = await fetch("/api/week", { method: "POST", headers, body: JSON.stringify({ weekNumber, postsPerDay: form.postsPerDay, niche: form.niche, platform: form.platform, audience: form.audience, message: form.message, conversionGoal: form.conversionGoal, brandSummary, phaseName, weeklyTheme, strategyId, feedbackInsights: "" }) });
+      const feedbackInsights = buildFeedbackInsights();
+      const res = await fetch("/api/week", { method: "POST", headers, body: JSON.stringify({ weekNumber, postsPerDay: form.postsPerDay, niche: form.niche, platform: form.platform, audience: form.audience, message: form.message, conversionGoal: form.conversionGoal, brandSummary, phaseName, weeklyTheme, strategyId, feedbackInsights }) });
       if (!res.ok) { const e = await res.json().catch(() => null); if (e?.code) { setShowPricing(true); } else throw new Error("Gagal"); return; }
       const data = await res.json(); setWeeks(w => ({ ...w, [weekNumber]: data })); setOpenWeek(weekNumber);
     } catch (e) { toast.error(e instanceof Error ? e.message : "Gagal"); } finally { setLoadingWeek(null); }
@@ -110,23 +124,23 @@ export default function DashboardPage() {
         <nav className="space-y-1 flex-1">
           <NavItem icon={<Home className="h-4 w-4" />} label="Overview" active={activeNav === "home"} onClick={() => setActiveNav("home")} />
           <NavItem icon={<Map className="h-4 w-4" />} label="Roadmap" active={activeNav === "roadmap"} onClick={() => setActiveNav("roadmap")} />
-          <NavItem icon={<FileText className="h-4 w-4" />} label="Konten" active={activeNav === "konten"} onClick={() => { setActiveNav("konten"); if (Object.keys(weeks).length) setOpenWeek(Number(Object.keys(weeks)[0])); }} />
+          <NavItem icon={<FileText className="h-4 w-4" />} label="Konten" active={activeNav === "konten"} onClick={() => { setActiveNav("konten"); }} />
           <NavItem icon={<BarChart3 className="h-4 w-4" />} label="Analitik" active={activeNav === "analitik"} onClick={() => userPlan !== "free" ? navigate("/analytics") : setShowPricing(true)} locked={userPlan === "free"} />
           <NavItem icon={<Users className="h-4 w-4" />} label="Audiens" active={activeNav === "audiens"} onClick={() => userPlan !== "free" ? setActiveNav("audiens") : setShowPricing(true)} locked={userPlan === "free"} />
           <NavItem icon={<Gauge className="h-4 w-4" />} label="KPI Tracker" active={activeNav === "kpi"} onClick={() => userPlan !== "free" ? setActiveNav("kpi") : setShowPricing(true)} locked={userPlan === "free"} />
           <NavItem icon={<Lightbulb className="h-4 w-4" />} label="Insight" active={activeNav === "insight"} onClick={() => userPlan !== "free" ? setActiveNav("insight") : setShowPricing(true)} locked={userPlan === "free"} />
         </nav>
-        {/* Save count */}
+        {/* Usage info */}
         <div className="border-t border-border pt-4 mt-4">
-          <p className="text-xs text-muted-foreground mb-1">Sisa Save Count</p>
-          <p className="text-3xl font-bold text-primary">100<span className="text-sm font-normal text-muted-foreground">/post</span></p>
-          <div className="h-1.5 rounded-full bg-muted mt-2 overflow-hidden"><div className="h-full bg-primary rounded-full" style={{ width: "70%" }} /></div>
+          <p className="text-xs text-muted-foreground mb-1">Generate hari ini</p>
+          <p className="text-3xl font-bold text-primary">{completedWeeks}<span className="text-sm font-normal text-muted-foreground"> minggu</span></p>
+          <div className="h-1.5 rounded-full bg-muted mt-2 overflow-hidden"><div className="h-full bg-primary rounded-full" style={{ width: `${progressPct}%` }} /></div>
           <Badge className="mt-3 bg-primary/10 text-primary border-0">{userPlan === "free" ? "Free Plan" : userPlan === "pro" ? "Pro Plan" : "Business"}</Badge>
         </div>
         {/* Profile */}
         <button onClick={handleLogout} className="flex items-center gap-3 mt-4 pt-4 border-t border-border w-full text-left">
-          <div className="h-9 w-9 rounded-full bg-muted flex items-center justify-center text-xs font-bold">{form.niche[0]?.toUpperCase() || "U"}</div>
-          <div className="flex-1 min-w-0"><p className="text-sm font-medium truncate">{form.niche || "User"}</p><p className="text-xs text-muted-foreground">Logout</p></div>
+          <div className="h-9 w-9 rounded-full bg-muted flex items-center justify-center text-xs font-bold">{(userName || "U")[0].toUpperCase()}</div>
+          <div className="flex-1 min-w-0"><p className="text-sm font-medium truncate">{userName || "User"}</p><p className="text-xs text-muted-foreground">Logout</p></div>
           <ChevronRight className="h-4 w-4 text-muted-foreground" />
         </button>
       </aside>
@@ -136,15 +150,15 @@ export default function DashboardPage() {
         <div className="max-w-4xl mx-auto">
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
-            <div><p className="text-sm text-muted-foreground">Hai, {form.niche.split(" ")[0]} 👋</p><h1 className="text-xl md:text-2xl font-bold">Yuk, bangun brand yang dipercaya.</h1><p className="text-xs text-muted-foreground mt-0.5">Rencana konten terstruktur untuk hasil maksimal.</p></div>
+            <div><p className="text-sm text-muted-foreground">Hai, {userName || form.niche.split(" ")[0]} 👋</p><h1 className="text-xl md:text-2xl font-bold">Yuk, bangun brand yang dipercaya.</h1><p className="text-xs text-muted-foreground mt-0.5">Rencana konten terstruktur untuk hasil maksimal.</p></div>
             <div className="flex items-center gap-3"><Bell className="h-5 w-5 text-muted-foreground" /><Button size="sm" variant="outline" className="gap-2 text-primary border-primary/30" onClick={() => setShowPricing(true)}><Crown className="h-4 w-4" />Upgrade</Button></div>
           </div>
 
-          {/* Plan limit warning */}
-          <div className="flex items-center justify-between rounded-lg bg-rose-50 border border-rose-200 px-4 py-2.5 mb-6">
+          {/* Plan limit warning - only show for free */}
+          {userPlan === "free" && <div className="flex items-center justify-between rounded-lg bg-rose-50 border border-rose-200 px-4 py-2.5 mb-6">
             <p className="text-sm text-rose-700">⚠️ Plan kamu hanya sampai minggu 1. Upgrade untuk akses lebih.</p>
             <Button size="sm" className="bg-primary text-primary-foreground shrink-0" onClick={() => setShowPricing(true)}>Upgrade Sekarang</Button>
-          </div>
+          </div>}
 
           {/* KPI Cards */}
           <Card className="p-5 mb-6">
@@ -404,7 +418,14 @@ function InsightView({ feedback, weekData }: { feedback: Feedback[]; weeks: Reco
 
 function RoadmapView({ strategy, weeks, completedWeeks, totalWeeksAvailable }: { strategy: Strategy; weeks: Record<number, WeekPlan>; completedWeeks: number; totalWeeksAvailable: number }) {
   const currentWeek = completedWeeks + 1;
-  const milestones: Record<number, string> = { 4: "1K followers target", 8: "Mulai monetisasi", 12: "Brand deals pertama", 20: "10K followers", 30: "Full-time creator", 40: "Scale & delegate", 52: "1 tahun selesai!" };
+  // Dynamic milestones based on phase boundaries
+  const milestones: Record<number, string> = {};
+  let offset = 0;
+  strategy.phases.forEach((phase, i) => {
+    const lastWeek = offset + phase.weeklyThemes.length;
+    milestones[lastWeek] = `✓ ${phase.name} selesai`;
+    offset = lastWeek;
+  });
 
   return (
     <div className="space-y-6">
