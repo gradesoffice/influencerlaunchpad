@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Sparkles, Target, Megaphone, Loader2, ChevronRight, Rocket, TrendingUp, Copy, Check, BarChart3, Heart, MessageCircle, Send, ShoppingCart, Crown, Settings, LogOut } from "lucide-react";
+import { Sparkles, Target, Megaphone, Loader2, ChevronRight, Rocket, TrendingUp, Copy, Check, BarChart3, Heart, MessageCircle, Send, ShoppingCart, Crown, Settings, LogOut, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -31,6 +31,7 @@ export default function DashboardPage() {
   const [openFeedback, setOpenFeedback] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
+  const [showPricing, setShowPricing] = useState(false);
 
   useEffect(() => { loadFromDb(); }, []);
 
@@ -60,7 +61,7 @@ export default function DashboardPage() {
     try {
       const headers = await getAuthHeaders();
       const res = await fetch("/api/strategy", { method: "POST", headers, body: JSON.stringify(form) });
-      if (!res.ok) { const e = await res.json().catch(() => null); if (e?.code === "PLAN_LIMIT" || e?.code === "RATE_LIMIT") toast.error(e.error, { action: { label: "Upgrade", onClick: () => navigate("/pricing") } }); else throw new Error(e?.error || "Gagal"); return; }
+      if (!res.ok) { const e = await res.json().catch(() => null); if (e?.code === "PLAN_LIMIT" || e?.code === "RATE_LIMIT") { setShowPricing(true); } else throw new Error(e?.error || "Gagal"); return; }
       const data = await res.json();
       setStrategy(data); setStrategyId(data.strategyId ?? null); toast.success("Strategi siap!"); setShowForm(false);
     } catch (e) { toast.error(e instanceof Error ? e.message : "Gagal"); } finally { setLoadingStrategy(false); }
@@ -72,7 +73,7 @@ export default function DashboardPage() {
       const brandSummary = `Persona: ${strategy.brand.persona}\nVoice: ${strategy.brand.voice}\nVisual: ${strategy.brand.visualStyle}\nTagline: ${strategy.brand.tagline}\nPillars: ${strategy.brand.contentPillars.map(p => p.name).join(", ")}`;
       const headers = await getAuthHeaders();
       const res = await fetch("/api/week", { method: "POST", headers, body: JSON.stringify({ weekNumber, postsPerDay: form.postsPerDay, niche: form.niche, platform: form.platform, audience: form.audience, message: form.message, conversionGoal: form.conversionGoal, brandSummary, phaseName, weeklyTheme, strategyId, feedbackInsights: "" }) });
-      if (!res.ok) { const e = await res.json().catch(() => null); if (e?.code) toast.error(e.error); else throw new Error("Gagal"); return; }
+      if (!res.ok) { const e = await res.json().catch(() => null); if (e?.code) { setShowPricing(true); } else throw new Error("Gagal"); return; }
       const data = await res.json(); setWeeks(w => ({ ...w, [weekNumber]: data })); setOpenWeek(weekNumber);
     } catch (e) { toast.error(e instanceof Error ? e.message : "Gagal"); } finally { setLoadingWeek(null); }
   };
@@ -237,6 +238,26 @@ export default function DashboardPage() {
         )}
 
         {/* Bottom spacer removed - no fixed bottom nav */}
+
+        {/* Pricing Modal Overlay */}
+        {showPricing && (
+          <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4 overflow-y-auto">
+            <div className="w-full max-w-2xl bg-background rounded-2xl p-6 relative max-h-[90vh] overflow-y-auto">
+              <button onClick={() => setShowPricing(false)} className="absolute top-4 right-4 h-8 w-8 rounded-full border border-border flex items-center justify-center hover:bg-muted"><X className="h-4 w-4" /></button>
+              <div className="text-center mb-6">
+                <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10"><Crown className="h-6 w-6 text-primary" /></div>
+                <h2 className="text-xl font-bold">Upgrade untuk akses lebih</h2>
+                <p className="mt-1 text-sm text-muted-foreground">Upgrade untuk fitur tanpa batas.</p>
+              </div>
+              <div className="rounded-full bg-rose-50 border border-rose-200 px-4 py-2 text-center mb-6"><p className="text-sm text-rose-700">⚠️ Kamu sudah mencapai batas plan Gratis.</p></div>
+              <div className="grid gap-4 md:grid-cols-2 mb-4">
+                <Card className="p-5"><div className="flex items-center gap-2 mb-3">🚀 <span className="font-bold">Free</span></div><p className="text-2xl font-bold mb-3">Gratis</p><div className="space-y-2 text-sm mb-4"><PF text="1 strategi" /><PF text="1 minggu" /><PL text="Tanpa analytics" /></div><Button variant="outline" className="w-full" onClick={() => setShowPricing(false)}>Lanjut Gratis</Button></Card>
+                <Card className="p-5 border-primary"><Badge className="mb-2 bg-primary text-primary-foreground">Popular</Badge><div className="flex items-center gap-2 mb-3">👑 <span className="font-bold">Pro</span></div><p className="text-2xl font-bold mb-3">Rp 99.000<span className="text-sm font-normal text-muted-foreground">/bln</span></p><div className="space-y-2 text-sm mb-4"><PF text="Strategi tanpa batas" /><PF text="6 bulan roadmap" /><PF text="Analytics & insights" /></div><Button className="w-full text-primary-foreground" style={{ background: "var(--gradient-hero)" }} onClick={() => { setShowPricing(false); navigate("/pricing"); }}>Upgrade Pro</Button></Card>
+              </div>
+              <p className="text-center text-xs text-muted-foreground">🔒 Pembayaran aman · Batalkan kapan saja</p>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -249,3 +270,6 @@ function MetricCard({ icon, label, value }: { icon: React.ReactNode; label: stri
 function MiniInput({ icon, value, onChange }: { icon: string; value: number; onChange: (v: number) => void }) {
   return <div className="text-center"><p className="text-xs mb-0.5">{icon}</p><Input type="number" min={0} value={value} onChange={e => onChange(Math.max(0, parseInt(e.target.value) || 0))} className="h-7 text-xs text-center px-1" /></div>;
 }
+
+function PF({ text }: { text: string }) { return <div className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-emerald-500 shrink-0" /><span>{text}</span></div>; }
+function PL({ text }: { text: string }) { return <div className="flex items-center gap-2 text-muted-foreground"><span className="h-3.5 w-3.5 shrink-0 text-center">—</span><span>{text}</span></div>; }
