@@ -11,11 +11,12 @@ import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 import { supabase } from "@/integrations/supabase/client";
 
-type FormState = { niche: string; platform: string; audience: string; message: string; conversionGoal: string; tone: string; postsPerDay: number; initialFollowers: number };
+type FormState = { niche: string; platform: string; audience: string; message: string; conversionGoal: string; tone: string; postsPerDay: number; initialFollowers: Record<string, number>; platforms: string[] };
 type Strategy = { brand: { persona: string; voice: string; visualStyle: string; tagline: string; contentPillars: { name: string; description: string }[]; hashtags: string[]; dosAndDonts: { dos: string[]; donts: string[] } }; phases: { name: string; days: string; objective: string; kpis: string[]; weeklyThemes: string[] }[] };
 type WeekPlan = { weekNumber: number; theme: string; focus: string; days: { day: number; dayLabel: string; dailyGoal: string; posts: { slot: string; format: string; hook: string; caption: string; cta: string; hashtags: string[]; visualIdea: string; conversionTie: string }[] }[] };
-type Feedback = { likes: number; comments: number; messages: number; conversions: number; note: string; reach: number; posted_at: string | null };
-const initial: FormState = { niche: "", platform: "Instagram", audience: "", message: "", conversionGoal: "", tone: "", postsPerDay: 2, initialFollowers: 0 };
+type Feedback = { likes: number; comments: number; messages: number; conversions: number; note: string; reach: number; posted_at: string | null; platform: string };
+const PLATFORMS = ["Instagram", "TikTok", "YouTube", "Twitter/X", "LinkedIn"];
+const initial: FormState = { niche: "", platform: "Instagram", audience: "", message: "", conversionGoal: "", tone: "", postsPerDay: 2, initialFollowers: {}, platforms: ["Instagram"] };
 
 export default function DashboardPage() {
   const navigate = useNavigate();
@@ -42,11 +43,11 @@ export default function DashboardPage() {
       const { data: strats } = await supabase.from("strategies").select("*").order("created_at", { ascending: false }).limit(1);
       if (strats?.length) {
         const s = strats[0]; setStrategyId(s.id); setStrategy({ brand: s.brand as any, phases: s.phases as any });
-        setForm({ niche: s.niche, platform: s.platform, audience: s.audience, message: s.message, conversionGoal: s.conversion_goal, tone: s.tone || "", postsPerDay: s.posts_per_day, initialFollowers: s.initial_followers || 0 });
+        setForm({ niche: s.niche, platform: s.platform, audience: s.audience, message: s.message, conversionGoal: s.conversion_goal, tone: s.tone || "", postsPerDay: s.posts_per_day, initialFollowers: (typeof s.initial_followers === "object" && s.initial_followers) ? s.initial_followers as Record<string, number> : { [s.platform]: 0 }, platforms: s.platform ? s.platform.split(",").map((p: string) => p.trim()) : ["Instagram"] });
         const { data: savedWeeks } = await supabase.from("weeks").select("week_number, data").eq("strategy_id", s.id);
         if (savedWeeks) { const m: Record<number, WeekPlan> = {}; savedWeeks.forEach(w => m[w.week_number] = w.data as any); setWeeks(m); }
-        const { data: savedFb } = await supabase.from("feedback").select("week_number, day, slot, likes, comments, messages, conversions, note, reach, posted_at").eq("strategy_id", s.id);
-        if (savedFb?.length) { const m: Record<string, Feedback> = {}; savedFb.forEach(f => m[`${f.week_number}|${f.day}|${f.slot}`] = f); setFeedback(m); }
+        const { data: savedFb } = await supabase.from("feedback").select("week_number, day, slot, likes, comments, messages, conversions, note, reach, posted_at, platform").eq("strategy_id", s.id);
+        if (savedFb?.length) { const m: Record<string, Feedback> = {}; savedFb.forEach(f => m[`${f.week_number}|${f.day}|${f.slot}|${f.platform || "instagram"}`] = { ...f, platform: f.platform || "instagram" }); setFeedback(m); }
       } else { setShowForm(true); }
       // Load user plan
       const { data: planRow } = await supabase.from("user_plans").select("plan, expires_at").limit(1).single();
@@ -116,9 +117,15 @@ export default function DashboardPage() {
     } catch { toast.error("Gagal"); }
   };
   const updateFeedback = (key: string, patch: Partial<Feedback>) => {
-    const cur = feedback[key] ?? { likes: 0, comments: 0, messages: 0, conversions: 0, note: "" };
+    const cur = feedback[key] ?? { likes: 0, comments: 0, messages: 0, conversions: 0, note: "", reach: 0, posted_at: null, platform: "instagram" };
     const updated = { ...cur, ...patch }; setFeedback(f => ({ ...f, [key]: updated }));
-    if (strategyId) { const [w, d, ...s] = key.split("|"); supabase.auth.getSession().then(({ data: { session } }) => { if (session?.user) supabase.from("feedback").upsert({ strategy_id: strategyId, user_id: session.user.id, week_number: Number(w), day: Number(d), slot: s.join("|"), ...updated, updated_at: new Date().toISOString() }, { onConflict: "strategy_id,week_number,day,slot" }); }); }
+    if (strategyId) {
+      const parts = key.split("|");
+      const platform = parts.length >= 4 ? parts[parts.length - 1] : "instagram";
+      const [w, d] = parts;
+      const slot = parts.slice(2, parts.length >= 4 ? -1 : undefined).join("|");
+      supabase.auth.getSession().then(({ data: { session } }) => { if (session?.user) supabase.from("feedback").upsert({ strategy_id: strategyId, user_id: session.user.id, week_number: Number(w), day: Number(d), slot, platform, likes: updated.likes, comments: updated.comments, messages: updated.messages, conversions: updated.conversions, reach: updated.reach || 0, note: updated.note || "", posted_at: updated.posted_at, updated_at: new Date().toISOString() }, { onConflict: "strategy_id,week_number,day,slot,platform" }); });
+    }
   };
 
   const totalWeeksAvailable = strategy?.phases.reduce((s, p) => s + p.weeklyThemes.length, 0) ?? 0;
@@ -219,7 +226,22 @@ export default function DashboardPage() {
                                     <button onClick={(e) => { e.stopPropagation(); copyPost(fkey, post); }} className="text-[10px] text-muted-foreground hover:text-primary">{isCopied ? "✓ Copied" : "📋 Copy"}</button>
                                     <button onClick={(e) => { e.stopPropagation(); setOpenFeedback(fbOpen ? null : fkey); }} className="text-[10px] text-muted-foreground hover:text-primary">📊 Track</button>
                                   </div>
-                                  {fbOpen && <div className="mt-2 grid grid-cols-5 gap-1"><MI icon="👁️" value={fb?.reach ?? 0} onChange={v => updateFeedback(fkey, { reach: v })} /><MI icon="❤️" value={fb?.likes ?? 0} onChange={v => updateFeedback(fkey, { likes: v })} /><MI icon="💬" value={fb?.comments ?? 0} onChange={v => updateFeedback(fkey, { comments: v })} /><MI icon="📩" value={fb?.messages ?? 0} onChange={v => updateFeedback(fkey, { messages: v })} /><MI icon="🛒" value={fb?.conversions ?? 0} onChange={v => updateFeedback(fkey, { conversions: v })} /></div>}
+                                  {fbOpen && <div className="mt-2 space-y-2">
+                                    {form.platforms.map(plat => {
+                                      const pfkey = `${wn}|${d.day}|${post.slot}|${plat.toLowerCase()}`;
+                                      const pfb = feedback[pfkey];
+                                      return <div key={plat} className="rounded-lg bg-muted/30 p-2">
+                                        <p className="text-[9px] font-semibold text-muted-foreground mb-1">{plat}</p>
+                                        <div className="grid grid-cols-5 gap-1">
+                                          <MI icon="👁️" value={pfb?.reach ?? 0} onChange={v => updateFeedback(pfkey, { reach: v, platform: plat.toLowerCase() })} />
+                                          <MI icon="❤️" value={pfb?.likes ?? 0} onChange={v => updateFeedback(pfkey, { likes: v, platform: plat.toLowerCase() })} />
+                                          <MI icon="💬" value={pfb?.comments ?? 0} onChange={v => updateFeedback(pfkey, { comments: v, platform: plat.toLowerCase() })} />
+                                          <MI icon="📩" value={pfb?.messages ?? 0} onChange={v => updateFeedback(pfkey, { messages: v, platform: plat.toLowerCase() })} />
+                                          <MI icon="🛒" value={pfb?.conversions ?? 0} onChange={v => updateFeedback(pfkey, { conversions: v, platform: plat.toLowerCase() })} />
+                                        </div>
+                                      </div>;
+                                    })}
+                                  </div>}
                                 </div>
                               );
                             })}
@@ -353,7 +375,13 @@ function FormView({ form, update, loading, onGenerate, onLogout }: { form: FormS
           <div className="grid gap-1.5"><Label className="text-sm">Target Audiens</Label><Textarea rows={2} value={form.audience} onChange={e => update("audience", e.target.value)} placeholder="Freelancer 22-35 thn" /></div>
           <div className="grid gap-1.5"><Label className="text-sm">Pesan Utama</Label><Textarea rows={2} value={form.message} onChange={e => update("message", e.target.value)} /></div>
           <div className="grid gap-1.5"><Label className="text-sm">Tujuan Konversi</Label><Input value={form.conversionGoal} onChange={e => update("conversionGoal", e.target.value)} /></div>
-          <div className="grid grid-cols-2 gap-3"><div className="grid gap-1.5"><Label className="text-sm">Tone (opsional)</Label><Input value={form.tone} onChange={e => update("tone", e.target.value)} /></div><div className="grid gap-1.5"><Label className="text-sm">Followers saat ini</Label><Input type="number" min={0} value={form.initialFollowers} onChange={e => update("initialFollowers", Math.max(0, parseInt(e.target.value) || 0))} placeholder="0" /></div></div>
+          <div className="grid gap-1.5"><Label className="text-sm">Tone (opsional)</Label><Input value={form.tone} onChange={e => update("tone", e.target.value)} /></div>
+          <div className="grid gap-1.5"><Label className="text-sm">Platform (pilih semua yang dipakai)</Label>
+            <div className="flex flex-wrap gap-2">{PLATFORMS.map(p => <button key={p} type="button" onClick={() => { const cur = form.platforms; update("platforms", cur.includes(p) ? cur.filter(x => x !== p) : [...cur, p]); }} className={`px-3 py-1.5 rounded-full text-xs border transition ${form.platforms.includes(p) ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground"}`}>{p}</button>)}</div>
+          </div>
+          {form.platforms.length > 0 && <div className="grid gap-2"><Label className="text-sm">Followers saat ini</Label>
+            <div className="grid grid-cols-2 gap-2">{form.platforms.map(p => <div key={p} className="flex items-center gap-2"><span className="text-xs w-16 truncate">{p}</span><Input type="number" min={0} value={form.initialFollowers[p.toLowerCase()] || 0} onChange={e => update("initialFollowers", { ...form.initialFollowers, [p.toLowerCase()]: parseInt(e.target.value) || 0 })} className="h-8 text-xs" /></div>)}</div>
+          </div>}
           <Button onClick={onGenerate} disabled={loading} size="lg" className="h-12 text-base font-semibold text-primary-foreground mt-2" style={{ background: "var(--gradient-hero)" }}>{loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <><Rocket className="mr-2 h-5 w-5" />Generate Roadmap</>}</Button>
         </div>
       </div>
