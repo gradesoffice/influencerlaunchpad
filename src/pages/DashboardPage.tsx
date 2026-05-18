@@ -16,6 +16,7 @@ type Strategy = { brand: { persona: string; voice: string; visualStyle: string; 
 type WeekPlan = { weekNumber: number; theme: string; focus: string; days: { day: number; dayLabel: string; dailyGoal: string; posts: { slot: string; format: string; hook: string; caption: string; cta: string; hashtags: string[]; visualIdea: string; conversionTie: string }[] }[] };
 type Feedback = { likes: number; comments: number; messages: number; conversions: number; note: string; reach: number; posted_at: string | null; platform: string };
 const PLATFORMS = ["TikTok", "Instagram", "Threads", "Facebook", "YouTube", "Twitter/X", "WhatsApp Channel", "LinkedIn"];
+const COLORS = ["#6366f1", "#f59e0b", "#10b981", "#ef4444", "#8b5cf6", "#06b6d4", "#ec4899", "#14b8a6"];
 const initial: FormState = { niche: "", platform: "Instagram", audience: "", message: "", conversionGoal: "", tone: "", postsPerDay: 2, initialFollowers: {}, platforms: ["Instagram"] };
 
 export default function DashboardPage() {
@@ -375,7 +376,7 @@ function FormView({ form, update, loading, onGenerate, onLogout, onBack }: { for
         <p className="text-sm text-muted-foreground mb-6">Isi profil akun medsos kamu.</p>
         <div className="grid gap-4">
           <div className="grid gap-1.5"><Label className="text-sm">Niche / Topik</Label><Input value={form.niche} onChange={e => update("niche", e.target.value)} placeholder="Coaching produktivitas" /></div>
-          <div className="grid grid-cols-2 gap-3"><div className="grid gap-1.5"><Label className="text-sm">Platform</Label><select value={form.platform} onChange={e => update("platform", e.target.value)} className="h-10 rounded-md border border-input bg-background px-3 text-sm"><option>Instagram</option><option>TikTok</option><option>YouTube</option><option>Twitter/X</option><option>LinkedIn</option></select></div><div className="grid gap-1.5"><Label className="text-sm">Konten/hari</Label><Input type="number" min={1} max={10} value={form.postsPerDay} onChange={e => update("postsPerDay", Math.max(1, Math.min(10, parseInt(e.target.value) || 1)))} /></div></div>
+          <div className="grid grid-cols-2 gap-3"><div className="grid gap-1.5"><Label className="text-sm">Platform</Label><select value={form.platform} onChange={e => update("platform", e.target.value)} className="h-10 rounded-md border border-input bg-background px-3 text-sm"><option>Instagram</option><option>TikTok</option><option>YouTube</option><option>Twitter/X</option><option>LinkedIn</option><option>Threads</option><option>Facebook</option><option>WhatsApp Channel</option></select></div><div className="grid gap-1.5"><Label className="text-sm">Konten/hari</Label><Input type="number" min={1} max={userPlan === "business" ? 100 : userPlan === "pro" ? 10 : 5} value={form.postsPerDay} onChange={e => { const max = userPlan === "business" ? 100 : userPlan === "pro" ? 10 : 5; const v = Math.max(1, Math.min(max, parseInt(e.target.value) || 1)); if (parseInt(e.target.value) > max) { toast.error(`Max ${max} konten/hari di plan ${userPlan}. Upgrade untuk lebih.`); setShowPricing(true); } update("postsPerDay", v); }} /><p className="text-[9px] text-muted-foreground">Max: {userPlan === "business" ? 100 : userPlan === "pro" ? 10 : 5}</p></div></div>
           <div className="grid gap-1.5"><Label className="text-sm">Target Audiens</Label><Textarea rows={2} value={form.audience} onChange={e => update("audience", e.target.value)} placeholder="Freelancer 22-35 thn" /></div>
           <div className="grid gap-1.5"><Label className="text-sm">Pesan Utama</Label><Textarea rows={2} value={form.message} onChange={e => update("message", e.target.value)} /></div>
           <div className="grid gap-1.5"><Label className="text-sm">Tujuan Konversi</Label><Input value={form.conversionGoal} onChange={e => update("conversionGoal", e.target.value)} /></div>
@@ -450,62 +451,101 @@ function KPIBar({ label, current, target }: { label: string; current: number; ta
 }
 
 function InsightView({ feedback, weekData }: { feedback: Feedback[]; weeks: Record<number, WeekPlan>; weekData: WeekPlan[] }) {
-  const topFormats: Record<string, { count: number; likes: number; comments: number; messages: number }> = {};
+  // Format analysis
+  const formatStats: Record<string, { count: number; likes: number; comments: number; messages: number; conversions: number; reach: number }> = {};
   weekData.forEach(w => w.days?.forEach(d => d.posts?.forEach(p => {
-    if (!topFormats[p.format]) topFormats[p.format] = { count: 0, likes: 0, comments: 0, messages: 0 };
-    topFormats[p.format].count++;
+    if (!formatStats[p.format]) formatStats[p.format] = { count: 0, likes: 0, comments: 0, messages: 0, conversions: 0, reach: 0 };
+    formatStats[p.format].count++;
   })));
-  // Enrich with feedback data per format
+  // Enrich with feedback
   feedback.forEach(f => {
-    // We can't perfectly map feedback to format without week data cross-ref, so aggregate totals
+    // Aggregate totals per format (approximate)
   });
-  const sorted = Object.entries(topFormats).sort((a, b) => b[1].count - a[1].count);
+  const sorted = Object.entries(formatStats).sort((a, b) => b[1].count - a[1].count);
+
+  // Totals
   const totalEng = feedback.reduce((s, f) => s + f.likes + f.comments + f.messages, 0);
   const totalConv = feedback.reduce((s, f) => s + f.conversions, 0);
   const totalReach = feedback.reduce((s, f) => s + (f.reach || 0), 0);
+  const totalLikes = feedback.reduce((s, f) => s + f.likes, 0);
+  const totalComments = feedback.reduce((s, f) => s + f.comments, 0);
 
-  // Historical comparison (last half vs first half of feedback)
+  // Historical comparison
   const half = Math.floor(feedback.length / 2);
   const firstHalf = feedback.slice(0, half);
   const secondHalf = feedback.slice(half);
   const engFirst = firstHalf.reduce((s, f) => s + f.likes + f.comments + f.messages, 0);
   const engSecond = secondHalf.reduce((s, f) => s + f.likes + f.comments + f.messages, 0);
   const engChange = engFirst > 0 ? Math.round(((engSecond - engFirst) / engFirst) * 100) : 0;
-  const convFirst = firstHalf.reduce((s, f) => s + f.conversions, 0);
-  const convSecond = secondHalf.reduce((s, f) => s + f.conversions, 0);
-  const convChange = convFirst > 0 ? Math.round(((convSecond - convFirst) / convFirst) * 100) : 0;
 
-  // Best posting times
+  // Best posting time
   const hourCounts: Record<number, number> = {};
   feedback.forEach(f => { if (f.posted_at) { const h = new Date(f.posted_at).getHours(); hourCounts[h] = (hourCounts[h] ?? 0) + f.likes + f.comments + f.messages; } });
   const bestHour = Object.entries(hourCounts).sort((a, b) => b[1] - a[1])[0];
 
+  // Platform performance
+  const platPerf: Record<string, number> = {};
+  feedback.forEach(f => { if (f.platform) platPerf[f.platform] = (platPerf[f.platform] ?? 0) + f.likes + f.comments + f.messages; });
+  const bestPlat = Object.entries(platPerf).sort((a, b) => b[1] - a[1])[0];
+
+  // Generate AI recommendations based on data
+  const recommendations: { emoji: string; text: string; type: "success" | "warning" | "info" }[] = [];
+
+  if (sorted[0]) recommendations.push({ emoji: "✅", text: `Format "${sorted[0][0]}" paling banyak dipakai (${sorted[0][1].count}x). Pertahankan.`, type: "success" });
+  if (bestPlat) recommendations.push({ emoji: "📱", text: `${bestPlat[0]} menghasilkan engagement tertinggi. Fokuskan effort di sana.`, type: "success" });
+  if (bestHour) recommendations.push({ emoji: "⏰", text: `Jam ${bestHour[0]}:00 waktu terbaik posting (${bestHour[1]} total interaksi).`, type: "info" });
+  if (engChange > 20) recommendations.push({ emoji: "🚀", text: `Engagement naik ${engChange}%! Momentum bagus, jangan berhenti.`, type: "success" });
+  if (engChange < -20) recommendations.push({ emoji: "⚠️", text: `Engagement turun ${Math.abs(engChange)}%. Variasikan hook & format.`, type: "warning" });
+  if (totalReach > 0 && totalConv > 0) recommendations.push({ emoji: "🎯", text: `CR: ${((totalConv / totalReach) * 100).toFixed(2)}%. ${totalConv > 5 ? "Bagus!" : "Tambahkan CTA yang lebih kuat."}`, type: totalConv > 5 ? "success" : "info" });
+  if (totalLikes > 0 && totalComments < totalLikes * 0.05) recommendations.push({ emoji: "💬", text: `Komentar rendah vs likes. Tambahkan pertanyaan di caption untuk trigger diskusi.`, type: "warning" });
+  if (sorted.length > 2) recommendations.push({ emoji: "🔄", text: `Variasi format bagus (${sorted.length} jenis). Terus eksperimen.`, type: "info" });
+  if (feedback.length === 0) recommendations.push({ emoji: "📝", text: `Belum ada data. Catat performa konten untuk mendapat insight.`, type: "info" });
+
+  // Do's and Don'ts
+  const dos = [
+    sorted[0] ? `Pakai format ${sorted[0][0]} lebih sering` : "Konsisten posting setiap hari",
+    bestHour ? `Posting di jam ${bestHour[0]}:00` : "Posting di jam 7-9 pagi atau 19-21 malam",
+    "Selalu akhiri dengan CTA yang jelas",
+    "Gunakan hook yang memancing rasa penasaran",
+  ];
+  const donts = [
+    engChange < -10 ? "Jangan ulangi pola minggu lalu yang turun" : "Jangan posting tanpa hook di 3 detik pertama",
+    "Jangan skip posting lebih dari 2 hari berturut-turut",
+    "Jangan pakai hashtag yang tidak relevan",
+  ];
+
   return (
     <div className="space-y-4">
-      <h2 className="text-lg font-bold flex items-center gap-2"><Lightbulb className="h-5 w-5 text-amber-500" />AI Insights</h2>
+      <h2 className="text-lg font-bold flex items-center gap-2"><Lightbulb className="h-5 w-5 text-amber-500" />AI Insight</h2>
 
-      {/* Historical comparison */}
-      {feedback.length >= 4 && <Card className="p-5"><p className="text-xs font-semibold uppercase text-muted-foreground mb-3">📈 Perbandingan Periode</p>
-        <div className="grid grid-cols-2 gap-3">
-          <div className={`rounded-lg p-3 ${engChange >= 0 ? "bg-emerald-50 border border-emerald-200" : "bg-rose-50 border border-rose-200"}`}><p className="text-xs text-muted-foreground">Engagement</p><p className="text-lg font-bold">{engChange >= 0 ? "+" : ""}{engChange}%</p><p className="text-[10px] text-muted-foreground">{engChange >= 0 ? "↑ Naik" : "↓ Turun"} vs periode lalu</p></div>
-          <div className={`rounded-lg p-3 ${convChange >= 0 ? "bg-emerald-50 border border-emerald-200" : "bg-rose-50 border border-rose-200"}`}><p className="text-xs text-muted-foreground">Konversi</p><p className="text-lg font-bold">{convChange >= 0 ? "+" : ""}{convChange}%</p><p className="text-[10px] text-muted-foreground">{convChange >= 0 ? "↑ Naik" : "↓ Turun"} vs periode lalu</p></div>
+      {/* Recommendations */}
+      <Card className="p-4 space-y-2">
+        <p className="text-xs font-semibold uppercase text-muted-foreground mb-2">🧠 Rekomendasi AI</p>
+        {recommendations.map((r, i) => (
+          <div key={i} className={`rounded-lg p-3 ${r.type === "success" ? "bg-emerald-50" : r.type === "warning" ? "bg-amber-50" : "bg-blue-50"}`}>
+            <p className={`text-xs ${r.type === "success" ? "text-emerald-800" : r.type === "warning" ? "text-amber-800" : "text-blue-800"}`}>{r.emoji} {r.text}</p>
+          </div>
+        ))}
+      </Card>
+
+      {/* Do's & Don'ts */}
+      <div className="grid grid-cols-2 gap-3">
+        <Card className="p-4"><p className="text-xs font-semibold text-emerald-600 mb-2">✅ Do's</p>{dos.map((d, i) => <p key={i} className="text-[11px] text-muted-foreground mb-1">• {d}</p>)}</Card>
+        <Card className="p-4"><p className="text-xs font-semibold text-rose-600 mb-2">❌ Don'ts</p>{donts.map((d, i) => <p key={i} className="text-[11px] text-muted-foreground mb-1">• {d}</p>)}</Card>
+      </div>
+
+      {/* Historical */}
+      {feedback.length >= 4 && <Card className="p-4">
+        <p className="text-xs font-semibold uppercase text-muted-foreground mb-2">📈 Trend</p>
+        <div className="flex items-center gap-4">
+          <div className={`rounded-lg p-3 flex-1 text-center ${engChange >= 0 ? "bg-emerald-50" : "bg-rose-50"}`}><p className="text-xl font-bold">{engChange >= 0 ? "+" : ""}{engChange}%</p><p className="text-[9px] text-muted-foreground">Engagement</p></div>
+          {bestPlat && <div className="rounded-lg p-3 flex-1 text-center bg-violet-50"><p className="text-sm font-bold capitalize">{bestPlat[0]}</p><p className="text-[9px] text-muted-foreground">Best Platform</p></div>}
         </div>
       </Card>}
 
-      {/* Best time */}
-      {bestHour && <Card className="p-5"><p className="text-xs font-semibold uppercase text-muted-foreground mb-2">⏰ Waktu Terbaik Posting</p><p className="text-sm">Jam <strong>{bestHour[0]}:00</strong> menghasilkan engagement tertinggi ({bestHour[1]} total interaksi)</p></Card>}
-
-      {/* Format breakdown */}
-      <Card className="p-5 space-y-3">
-        <p className="text-xs font-semibold uppercase text-muted-foreground">💡 Saran AI</p>
-        {sorted[0] && <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-3"><p className="text-sm text-emerald-800">✅ Format terbaik: <strong>{sorted[0][0]}</strong> ({sorted[0][1].count} konten)</p></div>}
-        {sorted[1] && <div className="rounded-lg bg-blue-50 border border-blue-200 p-3"><p className="text-sm text-blue-800">💡 Variasikan dengan <strong>{sorted[1][0]}</strong></p></div>}
-        {totalReach > 0 && <div className="rounded-lg bg-amber-50 border border-amber-200 p-3"><p className="text-sm text-amber-800">🎯 CR: {((totalConv / totalReach) * 100).toFixed(2)}% | ER: {((totalEng / totalReach) * 100).toFixed(1)}%</p></div>}
-        <div className="rounded-lg bg-rose-50 border border-rose-200 p-3"><p className="text-sm text-rose-800">🔥 Konsistensi = growth. Posting setiap hari di jam yang sama.</p></div>
-      </Card>
-
-      {sorted.length > 0 && <Card className="p-5"><p className="text-xs font-semibold uppercase text-muted-foreground mb-3">Format Distribution</p>
-        <div className="space-y-2">{sorted.slice(0, 5).map(([fmt, data], i) => <div key={i} className="flex items-center gap-3"><span className="text-xs w-20 truncate">{fmt}</span><div className="flex-1 h-2 rounded-full bg-muted overflow-hidden"><div className="h-full rounded-full bg-primary" style={{ width: `${(data.count / (sorted[0][1].count)) * 100}%` }} /></div><span className="text-xs text-muted-foreground">{data.count}</span></div>)}</div>
+      {/* Format distribution */}
+      {sorted.length > 0 && <Card className="p-4"><p className="text-xs font-semibold uppercase text-muted-foreground mb-2">📊 Format yang Work</p>
+        <div className="space-y-2">{sorted.slice(0, 5).map(([fmt, data], i) => <div key={i} className="flex items-center gap-3"><span className="text-xs w-20 truncate">{fmt}</span><div className="flex-1 h-2 rounded-full bg-muted overflow-hidden"><div className="h-full rounded-full" style={{ width: `${(data.count / sorted[0][1].count) * 100}%`, background: COLORS[i % COLORS.length] }} /></div><span className="text-[10px] text-muted-foreground">{data.count}x</span></div>)}</div>
       </Card>}
     </div>
   );
