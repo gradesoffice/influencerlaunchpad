@@ -271,16 +271,47 @@ function MI({ icon, value, onChange }: { icon: string; value: number; onChange: 
 }
 
 function PricingModal({ onClose, onUpgrade }: { onClose: () => void; onUpgrade: () => void }) {
+  const [code, setCode] = useState("");
+  const [applying, setApplying] = useState(false);
+
+  const applyCode = async () => {
+    if (!code.trim()) return;
+    setApplying(true);
+    // TODO: validate code against DB. For now, hardcoded codes:
+    const codes: Record<string, { discount: number; label: string }> = {
+      "LAUNCH50": { discount: 50, label: "50% off" },
+      "EARLY30": { discount: 30, label: "30% off" },
+      "FRIEND20": { discount: 20, label: "20% off" },
+    };
+    const found = codes[code.toUpperCase()];
+    if (found) {
+      toast.success(`Kode "${code}" aktif! Diskon ${found.label} diterapkan.`);
+    } else {
+      toast.error("Kode tidak valid.");
+    }
+    setApplying(false);
+  };
+
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-white rounded-2xl p-6 relative">
+    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4 overflow-y-auto">
+      <div className="w-full max-w-lg bg-white rounded-2xl p-6 relative my-4">
         <button onClick={onClose} className="absolute top-4 right-4 h-8 w-8 rounded-full border flex items-center justify-center hover:bg-muted"><X className="h-4 w-4" /></button>
-        <div className="text-center mb-5"><div className="mx-auto mb-2 h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center"><Crown className="h-6 w-6 text-primary" /></div><h2 className="text-lg font-bold">Upgrade untuk akses lebih</h2><p className="text-sm text-muted-foreground mt-1">Fitur tanpa batas dan hasil maksimal.</p></div>
+        <div className="text-center mb-5"><div className="mx-auto mb-2 h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center"><Crown className="h-6 w-6 text-primary" /></div><h2 className="text-lg font-bold">Upgrade Plan</h2></div>
         <div className="rounded-full bg-rose-50 border border-rose-200 px-4 py-2 text-center mb-5"><p className="text-xs text-rose-700">⚠️ Batas plan Gratis tercapai.</p></div>
-        <div className="grid grid-cols-2 gap-3 mb-4">
-          <Card className="p-4"><p className="font-bold mb-1">Free</p><p className="text-xl font-bold mb-2">Gratis</p><p className="text-xs text-muted-foreground">1 strategi, 1 minggu</p><Button variant="outline" className="w-full mt-3 h-9 text-xs" onClick={onClose}>Lanjut Gratis</Button></Card>
-          <Card className="p-4 border-primary"><Badge className="mb-1 bg-primary text-primary-foreground text-[10px]">Popular</Badge><p className="font-bold mb-1">Pro</p><p className="text-xl font-bold mb-2">99rb<span className="text-xs font-normal">/bln</span></p><p className="text-xs text-muted-foreground">Unlimited + analytics</p><Button className="w-full mt-3 h-9 text-xs text-primary-foreground" style={{ background: "var(--gradient-hero)" }} onClick={onUpgrade}>Upgrade</Button></Card>
+
+        {/* 3 Plans */}
+        <div className="grid grid-cols-3 gap-2 mb-4">
+          <div className="rounded-xl border p-3 text-center"><p className="text-xs font-bold">Free</p><p className="text-lg font-bold mt-1">Gratis</p><p className="text-[10px] text-muted-foreground mt-1">1 minggu</p><Button variant="outline" className="w-full mt-2 h-8 text-[10px]" onClick={onClose}>Lanjut</Button></div>
+          <div className="rounded-xl border-2 border-primary p-3 text-center relative"><Badge className="absolute -top-2 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground text-[8px] px-2">Popular</Badge><p className="text-xs font-bold">Pro</p><p className="text-lg font-bold mt-1">99rb</p><p className="text-[10px] text-muted-foreground mt-1">/bulan</p><Button className="w-full mt-2 h-8 text-[10px] text-primary-foreground" style={{ background: "var(--gradient-hero)" }} onClick={onUpgrade}>Upgrade</Button></div>
+          <div className="rounded-xl border p-3 text-center"><p className="text-xs font-bold">Business</p><p className="text-lg font-bold mt-1">249rb</p><p className="text-[10px] text-muted-foreground mt-1">/bulan</p><Button variant="outline" className="w-full mt-2 h-8 text-[10px]" onClick={onUpgrade}>Upgrade</Button></div>
         </div>
+
+        {/* Redeem code */}
+        <div className="flex gap-2 mb-3">
+          <Input value={code} onChange={e => setCode(e.target.value)} placeholder="Punya kode diskon?" className="h-9 text-xs flex-1" />
+          <Button variant="outline" className="h-9 text-xs shrink-0 px-3" onClick={applyCode} disabled={applying}>{applying ? <Loader2 className="h-3 w-3 animate-spin" /> : "Redeem"}</Button>
+        </div>
+
         <p className="text-center text-[10px] text-muted-foreground">🔒 Aman · Batalkan kapan saja</p>
       </div>
     </div>
