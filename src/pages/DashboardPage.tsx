@@ -247,36 +247,7 @@ export default function DashboardPage() {
                           <div key={di}>
                             {d.posts.map((post, pi2) => {
                               const fkey = `${wn}|${d.day}|${post.slot}`;
-                              const isCopied = copiedKey === fkey;
-                              const fbOpen = openFeedback === fkey;
-                              const fb = feedback[fkey];
-                              return (
-                                <div key={pi2} className="rounded-xl bg-white/80 p-3 mb-2 shadow-sm">
-                                  <div className="flex items-center gap-2 mb-1"><Badge variant="secondary" className="text-[9px] border-0">{post.format}</Badge></div>
-                                  <p className="text-sm font-medium">🪝 {post.hook}</p>
-                                  <p className="text-[11px] text-muted-foreground mt-1 line-clamp-1">{post.caption}</p>
-                                  <div className="flex gap-2 mt-2">
-                                    <button onClick={(e) => { e.stopPropagation(); copyPost(fkey, post); }} className="text-[10px] text-muted-foreground hover:text-primary">{isCopied ? "✓ Copied" : "📋 Copy"}</button>
-                                    <button onClick={(e) => { e.stopPropagation(); setOpenFeedback(fbOpen ? null : fkey); }} className="text-[10px] text-muted-foreground hover:text-primary">📊 Track</button>
-                                  </div>
-                                  {fbOpen && <div className="mt-2 space-y-2">
-                                    {form.platforms.map(plat => {
-                                      const pfkey = `${wn}|${d.day}|${post.slot}|${plat.toLowerCase()}`;
-                                      const pfb = feedback[pfkey];
-                                      return <div key={plat} className="rounded-lg bg-muted/30 p-2">
-                                        <p className="text-[9px] font-semibold text-muted-foreground mb-1">{plat}</p>
-                                        <div className="grid grid-cols-5 gap-1">
-                                          <MI icon="👁️" value={pfb?.reach ?? 0} onChange={v => updateFeedback(pfkey, { reach: v, platform: plat.toLowerCase() })} />
-                                          <MI icon="❤️" value={pfb?.likes ?? 0} onChange={v => updateFeedback(pfkey, { likes: v, platform: plat.toLowerCase() })} />
-                                          <MI icon="💬" value={pfb?.comments ?? 0} onChange={v => updateFeedback(pfkey, { comments: v, platform: plat.toLowerCase() })} />
-                                          <MI icon="📩" value={pfb?.messages ?? 0} onChange={v => updateFeedback(pfkey, { messages: v, platform: plat.toLowerCase() })} />
-                                          <MI icon="🛒" value={pfb?.conversions ?? 0} onChange={v => updateFeedback(pfkey, { conversions: v, platform: plat.toLowerCase() })} />
-                                        </div>
-                                      </div>;
-                                    })}
-                                  </div>}
-                                </div>
-                              );
+                              return <PostCard key={pi2} post={post} fkey={fkey} wn={wn} day={d.day} copiedKey={copiedKey} openFeedback={openFeedback} feedback={feedback} platforms={form.platforms} onCopy={copyPost} onFeedbackToggle={setOpenFeedback} onFeedbackUpdate={updateFeedback} />;
                             })}
                           </div>
                         ))}
@@ -692,6 +663,55 @@ function AnalitikInline({ strategyId }: { strategyId: string | null }) {
         </div>
       </Card>}
       {totals.posts === 0 && <Card className="p-8 text-center"><p className="text-muted-foreground">Catat performa konten di tab Konten untuk melihat analitik.</p></Card>}
+    </div>
+  );
+}
+
+
+function PostCard({ post, fkey, wn, day, copiedKey, openFeedback, feedback, platforms, onCopy, onFeedbackToggle, onFeedbackUpdate }: {
+  post: WeekPlan["days"][0]["posts"][0]; fkey: string; wn: number; day: number;
+  copiedKey: string | null; openFeedback: string | null; feedback: Record<string, Feedback>; platforms: string[];
+  onCopy: (key: string, post: WeekPlan["days"][0]["posts"][0]) => void;
+  onFeedbackToggle: (key: string | null) => void;
+  onFeedbackUpdate: (key: string, patch: Partial<Feedback>) => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const isCopied = copiedKey === fkey;
+  const fbOpen = openFeedback === fkey;
+
+  return (
+    <div className="rounded-xl bg-white/80 p-3 mb-2 shadow-sm">
+      <button onClick={() => setExpanded(!expanded)} className="w-full text-left">
+        <div className="flex items-center gap-2 mb-1"><Badge variant="secondary" className="text-[9px] border-0">{post.format}</Badge><span className="text-[9px] text-muted-foreground">Day {day - (wn-1)*7}</span></div>
+        <p className={`text-sm font-medium ${expanded ? "" : "line-clamp-1"}`}>🪝 {post.hook}</p>
+      </button>
+
+      {expanded && <>
+        <p className="text-xs text-muted-foreground mt-2">{post.caption}</p>
+        <p className="text-xs mt-1"><strong>CTA:</strong> {post.cta}</p>
+        <p className="text-[10px] text-muted-foreground mt-1">🎨 {post.visualIdea}</p>
+        <div className="flex flex-wrap gap-1 mt-1">{post.hashtags.slice(0, 5).map((h, hi) => <span key={hi} className="text-[9px] text-primary/60">{h.startsWith("#") ? h : `#${h}`}</span>)}</div>
+        <div className="flex gap-2 mt-3">
+          <button onClick={(e) => { e.stopPropagation(); onCopy(fkey, post); }} className={`px-3 py-1.5 rounded-lg text-xs font-medium ${isCopied ? "bg-emerald-100 text-emerald-700" : "bg-primary/10 text-primary"}`}>{isCopied ? "✓ Copied" : "📋 Copy"}</button>
+          <button onClick={(e) => { e.stopPropagation(); onFeedbackToggle(fbOpen ? null : fkey); }} className="px-3 py-1.5 rounded-lg text-xs font-medium bg-muted text-muted-foreground">📊 Track</button>
+        </div>
+        {fbOpen && <div className="mt-2 space-y-2">
+          {platforms.map(plat => {
+            const pfkey = `${fkey}|${plat.toLowerCase()}`;
+            const pfb = feedback[pfkey];
+            return <div key={plat} className="rounded-lg bg-muted/30 p-2">
+              <p className="text-[9px] font-semibold text-muted-foreground mb-1">{plat}</p>
+              <div className="grid grid-cols-5 gap-1">
+                <MI icon="👁️" value={pfb?.reach ?? 0} onChange={v => onFeedbackUpdate(pfkey, { reach: v, platform: plat.toLowerCase() })} />
+                <MI icon="❤️" value={pfb?.likes ?? 0} onChange={v => onFeedbackUpdate(pfkey, { likes: v, platform: plat.toLowerCase() })} />
+                <MI icon="💬" value={pfb?.comments ?? 0} onChange={v => onFeedbackUpdate(pfkey, { comments: v, platform: plat.toLowerCase() })} />
+                <MI icon="📩" value={pfb?.messages ?? 0} onChange={v => onFeedbackUpdate(pfkey, { messages: v, platform: plat.toLowerCase() })} />
+                <MI icon="🛒" value={pfb?.conversions ?? 0} onChange={v => onFeedbackUpdate(pfkey, { conversions: v, platform: plat.toLowerCase() })} />
+              </div>
+            </div>;
+          })}
+        </div>}
+      </>}
     </div>
   );
 }
