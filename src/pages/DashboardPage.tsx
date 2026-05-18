@@ -510,85 +510,101 @@ function InsightView({ feedback, weekData }: { feedback: Feedback[]; weeks: Reco
 
 function RoadmapView({ strategy, weeks, completedWeeks, totalWeeksAvailable }: { strategy: Strategy; weeks: Record<number, WeekPlan>; completedWeeks: number; totalWeeksAvailable: number }) {
   const currentWeek = completedWeeks + 1;
-  // Dynamic milestones based on phase boundaries
-  const milestones: Record<number, string> = {};
-  let offset = 0;
-  strategy.phases.forEach((phase, i) => {
-    const lastWeek = offset + phase.weeklyThemes.length;
-    milestones[lastWeek] = `✓ ${phase.name} selesai`;
-    offset = lastWeek;
-  });
+
+  // Epic phase names & motivational quotes
+  const phaseEpicNames = ["The Blueprint of Trust", "The Rise of Influence", "The Empire of Conversion"];
+  const phaseSubtitles = ["Mengubah akun dari 'sekadar profil' menjadi 'pusat referensi'", "Memperluas jangkauan dan membangun komunitas loyal", "Mengubah perhatian menjadi pendapatan nyata"];
+
+  // Motivational status messages per state
+  const getMotivation = (wn: number, done: boolean, isCurrent: boolean) => {
+    if (done) return { text: "Langkah ini sudah kamu taklukkan. Terus maju.", emoji: "✅" };
+    if (isCurrent) return { text: "Kamu sedang di sini. Dunia mulai memperhatikan.", emoji: "🔥" };
+    if (wn === currentWeek + 1) return { text: "Sebentar lagi. Bersiaplah.", emoji: "⚡" };
+    return { text: "Terkunci. Selesaikan yang sebelumnya dulu.", emoji: "🔒" };
+  };
+
+  // Survivor stat
+  const survivalPct = Math.max(5, 100 - (completedWeeks * 7));
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-bold flex items-center gap-2"><Map className="h-5 w-5 text-primary" />Roadmap</h2>
-        <Badge variant="outline">{completedWeeks}/{totalWeeksAvailable} minggu</Badge>
+    <div className="space-y-8">
+      {/* Header */}
+      <div className="text-center">
+        <p className="text-xs uppercase tracking-widest text-primary font-semibold">Your Journey</p>
+        <h2 className="text-2xl font-bold mt-1">Roadmap Dominasi</h2>
+        <p className="text-xs text-muted-foreground mt-2">Hanya <span className="text-primary font-bold">{survivalPct}%</span> kreator yang sampai di titik ini. Kamu salah satunya.</p>
       </div>
 
-      {/* Timeline */}
-      <div className="relative">
-        {strategy.phases.map((phase, pi) => {
-          const weekOffset = strategy.phases.slice(0, pi).reduce((s, p) => s + p.weeklyThemes.length, 0);
-          const phaseWeeks = phase.weeklyThemes.length;
-          return (
-            <div key={pi} className="mb-8">
-              {/* Phase header */}
-              <Card className="p-4 mb-4 border-l-4 border-l-primary">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-semibold uppercase text-primary">Phase {pi + 1} · {phase.days}</p>
-                    <h3 className="font-bold">{phase.name}</h3>
-                    <p className="text-xs text-muted-foreground mt-0.5">{phase.objective}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-xs text-muted-foreground">KPI Target</p>
-                    <div className="flex flex-wrap gap-1 justify-end mt-1">{phase.kpis.slice(0, 2).map((k, i) => <Badge key={i} variant="secondary" className="text-[10px]">{k}</Badge>)}</div>
-                  </div>
-                </div>
-              </Card>
+      {/* Progress overview */}
+      <div className="flex items-center justify-center gap-6">
+        <div className="relative h-20 w-20">
+          <svg className="h-20 w-20 -rotate-90"><circle cx="40" cy="40" r="34" fill="none" stroke="#f3f4f6" strokeWidth="6" /><circle cx="40" cy="40" r="34" fill="none" stroke="hsl(var(--primary))" strokeWidth="6" strokeDasharray={`${(completedWeeks / totalWeeksAvailable) * 213} 213`} strokeLinecap="round" className={completedWeeks > 0 ? "drop-shadow-[0_0_8px_hsl(var(--primary)/0.5)]" : ""} /></svg>
+          <span className="absolute inset-0 flex items-center justify-center text-lg font-bold">{Math.round((completedWeeks / totalWeeksAvailable) * 100)}%</span>
+        </div>
+        <div><p className="text-sm font-semibold">{completedWeeks} / {totalWeeksAvailable}</p><p className="text-xs text-muted-foreground">minggu ditaklukkan</p></div>
+      </div>
 
-              {/* Week timeline */}
-              <div className="ml-4 border-l-2 border-border pl-6 space-y-3">
-                {phase.weeklyThemes.map((theme, wi) => {
-                  const wn = weekOffset + wi + 1;
-                  const done = !!weeks[wn];
-                  const isCurrent = wn === currentWeek;
-                  const milestone = milestones[wn];
-                  return (
-                    <div key={wi} className="relative">
-                      {/* Dot on timeline */}
-                      <div className={`absolute -left-[31px] top-2 h-4 w-4 rounded-full border-2 ${done ? "bg-primary border-primary" : isCurrent ? "bg-white border-primary ring-4 ring-primary/20" : "bg-muted border-border"}`}>
-                        {done && <Check className="h-2.5 w-2.5 text-white absolute top-0.5 left-0.5" />}
-                      </div>
-
-                      {/* Current indicator */}
-                      {isCurrent && <div className="absolute -left-[70px] top-1 text-[10px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded">KAMU</div>}
-
-                      {/* Week card */}
-                      <div className={`rounded-lg border p-3 ${isCurrent ? "border-primary bg-primary/5" : done ? "border-border bg-white" : "border-border/50 bg-muted/30"}`}>
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-xs text-muted-foreground">Minggu {wn} · Hari {(wn-1)*7+1}–{wn*7}</p>
-                            <p className={`text-sm font-medium ${done ? "" : "text-muted-foreground"}`}>{theme}</p>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {done && <Badge className="bg-emerald-100 text-emerald-700 text-[10px]">✅ Selesai</Badge>}
-                            {isCurrent && <Badge className="bg-primary text-primary-foreground text-[10px]">🔄 Aktif</Badge>}
-                            {!done && !isCurrent && <Badge variant="outline" className="text-[10px] text-muted-foreground">⬜ Belum</Badge>}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Milestone */}
-                      {milestone && <div className="mt-2 ml-2 flex items-center gap-2"><span className="text-xs">🏆</span><p className="text-xs font-medium text-amber-700 bg-amber-50 px-2 py-0.5 rounded">{milestone}</p></div>}
-                    </div>
-                  );
-                })}
-              </div>
+      {/* Phases */}
+      {strategy.phases.map((phase, pi) => {
+        const weekOffset = strategy.phases.slice(0, pi).reduce((s, p) => s + p.weeklyThemes.length, 0);
+        const epicName = phaseEpicNames[pi] || phase.name;
+        const subtitle = phaseSubtitles[pi] || phase.objective;
+        return (
+          <div key={pi} className="space-y-4">
+            {/* Phase header */}
+            <div className="rounded-2xl bg-white p-5 shadow-sm">
+              <p className="text-[10px] uppercase tracking-widest text-primary font-bold">Fase {pi + 1}</p>
+              <h3 className="text-lg font-bold mt-1">{epicName}</h3>
+              <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>
+              <div className="flex gap-2 mt-3">{phase.kpis.slice(0, 2).map((k, i) => <Badge key={i} variant="secondary" className="text-[9px]">{k}</Badge>)}</div>
             </div>
-          );
-        })}
+
+            {/* Weeks */}
+            <div className="space-y-2 pl-2">
+              {phase.weeklyThemes.map((theme, wi) => {
+                const wn = weekOffset + wi + 1;
+                const done = !!weeks[wn];
+                const isCurrent = wn === currentWeek;
+                const motivation = getMotivation(wn, done, isCurrent);
+                const isLocked = !done && !isCurrent && wn > currentWeek;
+
+                return (
+                  <div key={wi} className={`relative rounded-xl p-4 transition-all ${isCurrent ? "bg-white shadow-md ring-1 ring-primary/30" : done ? "bg-white/80 shadow-sm" : "bg-muted/30"} ${isCurrent ? "animate-pulse-subtle" : ""}`}>
+                    {/* Glow effect for active */}
+                    {isCurrent && <div className="absolute inset-0 rounded-xl bg-primary/5 animate-pulse" />}
+
+                    <div className="relative flex items-start gap-3">
+                      {/* Status icon */}
+                      <div className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 text-sm ${done ? "bg-emerald-100" : isCurrent ? "bg-primary/20" : "bg-muted"}`}>
+                        {motivation.emoji}
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between">
+                          <p className={`text-xs ${isLocked ? "text-muted-foreground/50" : "text-muted-foreground"}`}>Minggu {wn}</p>
+                          {done && <span className="text-[9px] text-emerald-600 font-semibold">CONQUERED</span>}
+                          {isCurrent && <span className="text-[9px] text-primary font-bold animate-pulse">ACTIVE NOW</span>}
+                        </div>
+                        <p className={`text-sm font-semibold mt-0.5 ${isLocked ? "text-muted-foreground/40" : ""}`}>{theme}</p>
+                        <p className={`text-[11px] mt-1 italic ${isCurrent ? "text-primary/80" : "text-muted-foreground/60"}`}>{motivation.text}</p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Phase completion badge */}
+            {weekOffset + phase.weeklyThemes.length <= completedWeeks && (
+              <div className="text-center py-2"><Badge className="bg-emerald-100 text-emerald-700 text-xs">🏆 Fase {pi + 1} Selesai — Kamu luar biasa</Badge></div>
+            )}
+          </div>
+        );
+      })}
+
+      {/* Bottom motivational */}
+      <div className="text-center py-6">
+        <p className="text-xs text-muted-foreground italic">"Konsistensi mengalahkan bakat. Setiap hari kamu posting, kamu menang."</p>
       </div>
     </div>
   );
