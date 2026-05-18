@@ -11,11 +11,11 @@ import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 import { supabase } from "@/integrations/supabase/client";
 
-type FormState = { niche: string; platform: string; audience: string; message: string; conversionGoal: string; tone: string; postsPerDay: number };
+type FormState = { niche: string; platform: string; audience: string; message: string; conversionGoal: string; tone: string; postsPerDay: number; initialFollowers: number };
 type Strategy = { brand: { persona: string; voice: string; visualStyle: string; tagline: string; contentPillars: { name: string; description: string }[]; hashtags: string[]; dosAndDonts: { dos: string[]; donts: string[] } }; phases: { name: string; days: string; objective: string; kpis: string[]; weeklyThemes: string[] }[] };
 type WeekPlan = { weekNumber: number; theme: string; focus: string; days: { day: number; dayLabel: string; dailyGoal: string; posts: { slot: string; format: string; hook: string; caption: string; cta: string; hashtags: string[]; visualIdea: string; conversionTie: string }[] }[] };
-type Feedback = { likes: number; comments: number; messages: number; conversions: number; note: string };
-const initial: FormState = { niche: "", platform: "Instagram", audience: "", message: "", conversionGoal: "", tone: "", postsPerDay: 2 };
+type Feedback = { likes: number; comments: number; messages: number; conversions: number; note: string; reach: number; posted_at: string | null };
+const initial: FormState = { niche: "", platform: "Instagram", audience: "", message: "", conversionGoal: "", tone: "", postsPerDay: 2, initialFollowers: 0 };
 
 export default function DashboardPage() {
   const navigate = useNavigate();
@@ -42,10 +42,10 @@ export default function DashboardPage() {
       const { data: strats } = await supabase.from("strategies").select("*").order("created_at", { ascending: false }).limit(1);
       if (strats?.length) {
         const s = strats[0]; setStrategyId(s.id); setStrategy({ brand: s.brand as any, phases: s.phases as any });
-        setForm({ niche: s.niche, platform: s.platform, audience: s.audience, message: s.message, conversionGoal: s.conversion_goal, tone: s.tone || "", postsPerDay: s.posts_per_day });
+        setForm({ niche: s.niche, platform: s.platform, audience: s.audience, message: s.message, conversionGoal: s.conversion_goal, tone: s.tone || "", postsPerDay: s.posts_per_day, initialFollowers: s.initial_followers || 0 });
         const { data: savedWeeks } = await supabase.from("weeks").select("week_number, data").eq("strategy_id", s.id);
         if (savedWeeks) { const m: Record<number, WeekPlan> = {}; savedWeeks.forEach(w => m[w.week_number] = w.data as any); setWeeks(m); }
-        const { data: savedFb } = await supabase.from("feedback").select("week_number, day, slot, likes, comments, messages, conversions, note").eq("strategy_id", s.id);
+        const { data: savedFb } = await supabase.from("feedback").select("week_number, day, slot, likes, comments, messages, conversions, note, reach, posted_at").eq("strategy_id", s.id);
         if (savedFb?.length) { const m: Record<string, Feedback> = {}; savedFb.forEach(f => m[`${f.week_number}|${f.day}|${f.slot}`] = f); setFeedback(m); }
       } else { setShowForm(true); }
       // Load user plan
@@ -96,7 +96,24 @@ export default function DashboardPage() {
   };
   const copyPost = async (key: string, post: WeekPlan["days"][0]["posts"][0]) => {
     const text = `${post.hook}\n\n${post.caption}\n\n${post.cta}\n\n${post.hashtags.map(h => h.startsWith("#") ? h : `#${h}`).join(" ")}`;
-    try { await navigator.clipboard.writeText(text); setCopiedKey(key); toast.success("Disalin!"); setTimeout(() => setCopiedKey(null), 2000); } catch { toast.error("Gagal"); }
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedKey(key);
+      toast.success("Disalin!");
+      setTimeout(() => setCopiedKey(null), 2000);
+      // Record timestamp as posted_at
+      if (strategyId) {
+        const [w, d, ...s] = key.split("|");
+        const cur = feedback[key] ?? { likes: 0, comments: 0, messages: 0, conversions: 0, note: "", reach: 0, posted_at: null };
+        if (!cur.posted_at) {
+          const updated = { ...cur, posted_at: new Date().toISOString() };
+          setFeedback(f => ({ ...f, [key]: updated }));
+          supabase.auth.getSession().then(({ data: { session } }) => {
+            if (session?.user) supabase.from("feedback").upsert({ strategy_id: strategyId, user_id: session.user.id, week_number: Number(w), day: Number(d), slot: s.join("|"), ...updated, updated_at: new Date().toISOString() }, { onConflict: "strategy_id,week_number,day,slot" });
+          });
+        }
+      }
+    } catch { toast.error("Gagal"); }
   };
   const updateFeedback = (key: string, patch: Partial<Feedback>) => {
     const cur = feedback[key] ?? { likes: 0, comments: 0, messages: 0, conversions: 0, note: "" };
@@ -111,6 +128,9 @@ export default function DashboardPage() {
   const totalLikes = fbVals.reduce((s, f) => s + f.likes, 0);
   const totalConversions = fbVals.reduce((s, f) => s + f.conversions, 0);
   const totalDM = fbVals.reduce((s, f) => s + f.messages, 0);
+  const totalReach = fbVals.reduce((s, f) => s + (f.reach || 0), 0);
+  const engagementRate = totalReach > 0 ? ((totalLikes + fbVals.reduce((s, f) => s + f.comments, 0) + totalDM) / totalReach * 100).toFixed(1) : "0";
+  const conversionRate = totalReach > 0 ? ((totalConversions / totalReach) * 100).toFixed(2) : "0";
 
   if (initialLoading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
   if (showForm || !strategy) return <FormView form={form} update={update} loading={loadingStrategy} onGenerate={generateStrategy} onLogout={handleLogout} />;
@@ -156,7 +176,7 @@ export default function DashboardPage() {
           {/* KPI - clean, borderless */}
           {activeNav === "home" && <div className="grid grid-cols-3 gap-3">
             <div className="rounded-2xl bg-white p-4 text-center shadow-sm"><Heart className="h-5 w-5 text-rose-400 mx-auto mb-1" /><p className="text-lg font-bold">{totalLikes}</p><p className="text-[10px] text-muted-foreground">Likes</p></div>
-            <div className="rounded-2xl bg-white p-4 text-center shadow-sm"><TrendingUp className="h-5 w-5 text-violet-400 mx-auto mb-1" /><p className="text-lg font-bold">{progressPct}%</p><p className="text-[10px] text-muted-foreground">Progress</p></div>
+            <div className="rounded-2xl bg-white p-4 text-center shadow-sm"><TrendingUp className="h-5 w-5 text-violet-400 mx-auto mb-1" /><p className="text-lg font-bold">{totalReach > 0 ? `${(totalReach / 1000).toFixed(1)}K` : progressPct + "%"}</p><p className="text-[10px] text-muted-foreground">Reach</p></div>
             <div className="rounded-2xl bg-white p-4 text-center shadow-sm"><Send className="h-5 w-5 text-emerald-400 mx-auto mb-1" /><p className="text-lg font-bold">{totalDM}</p><p className="text-[10px] text-muted-foreground">DM</p></div>
           </div>}
 
@@ -199,7 +219,7 @@ export default function DashboardPage() {
                                     <button onClick={(e) => { e.stopPropagation(); copyPost(fkey, post); }} className="text-[10px] text-muted-foreground hover:text-primary">{isCopied ? "✓ Copied" : "📋 Copy"}</button>
                                     <button onClick={(e) => { e.stopPropagation(); setOpenFeedback(fbOpen ? null : fkey); }} className="text-[10px] text-muted-foreground hover:text-primary">📊 Track</button>
                                   </div>
-                                  {fbOpen && <div className="mt-2 grid grid-cols-4 gap-1"><MI icon="❤️" value={fb?.likes ?? 0} onChange={v => updateFeedback(fkey, { likes: v })} /><MI icon="💬" value={fb?.comments ?? 0} onChange={v => updateFeedback(fkey, { comments: v })} /><MI icon="📩" value={fb?.messages ?? 0} onChange={v => updateFeedback(fkey, { messages: v })} /><MI icon="🛒" value={fb?.conversions ?? 0} onChange={v => updateFeedback(fkey, { conversions: v })} /></div>}
+                                  {fbOpen && <div className="mt-2 grid grid-cols-5 gap-1"><MI icon="👁️" value={fb?.reach ?? 0} onChange={v => updateFeedback(fkey, { reach: v })} /><MI icon="❤️" value={fb?.likes ?? 0} onChange={v => updateFeedback(fkey, { likes: v })} /><MI icon="💬" value={fb?.comments ?? 0} onChange={v => updateFeedback(fkey, { comments: v })} /><MI icon="📩" value={fb?.messages ?? 0} onChange={v => updateFeedback(fkey, { messages: v })} /><MI icon="🛒" value={fb?.conversions ?? 0} onChange={v => updateFeedback(fkey, { conversions: v })} /></div>}
                                 </div>
                               );
                             })}
@@ -333,7 +353,7 @@ function FormView({ form, update, loading, onGenerate, onLogout }: { form: FormS
           <div className="grid gap-1.5"><Label className="text-sm">Target Audiens</Label><Textarea rows={2} value={form.audience} onChange={e => update("audience", e.target.value)} placeholder="Freelancer 22-35 thn" /></div>
           <div className="grid gap-1.5"><Label className="text-sm">Pesan Utama</Label><Textarea rows={2} value={form.message} onChange={e => update("message", e.target.value)} /></div>
           <div className="grid gap-1.5"><Label className="text-sm">Tujuan Konversi</Label><Input value={form.conversionGoal} onChange={e => update("conversionGoal", e.target.value)} /></div>
-          <div className="grid gap-1.5"><Label className="text-sm">Tone (opsional)</Label><Input value={form.tone} onChange={e => update("tone", e.target.value)} /></div>
+          <div className="grid grid-cols-2 gap-3"><div className="grid gap-1.5"><Label className="text-sm">Tone (opsional)</Label><Input value={form.tone} onChange={e => update("tone", e.target.value)} /></div><div className="grid gap-1.5"><Label className="text-sm">Followers saat ini</Label><Input type="number" min={0} value={form.initialFollowers} onChange={e => update("initialFollowers", Math.max(0, parseInt(e.target.value) || 0))} placeholder="0" /></div></div>
           <Button onClick={onGenerate} disabled={loading} size="lg" className="h-12 text-base font-semibold text-primary-foreground mt-2" style={{ background: "var(--gradient-hero)" }}>{loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <><Rocket className="mr-2 h-5 w-5" />Generate Roadmap</>}</Button>
         </div>
       </div>
@@ -368,16 +388,17 @@ function AudiensView({ niche, audience, platform }: { niche: string; audience: s
 }
 
 function KPIView({ feedback, totalWeeks }: { feedback: Feedback[]; totalWeeks: number }) {
-  const totals = feedback.reduce((a, f) => ({ likes: a.likes + f.likes, comments: a.comments + f.comments, messages: a.messages + f.messages, conversions: a.conversions + f.conversions }), { likes: 0, comments: 0, messages: 0, conversions: 0 });
-  const avgEng = feedback.length > 0 ? Math.round((totals.likes + totals.comments + totals.messages) / feedback.length) : 0;
-  const cr = feedback.length > 0 ? ((totals.conversions / feedback.length) * 100).toFixed(1) : "0";
+  const totals = feedback.reduce((a, f) => ({ likes: a.likes + f.likes, comments: a.comments + f.comments, messages: a.messages + f.messages, conversions: a.conversions + f.conversions, reach: a.reach + (f.reach || 0) }), { likes: 0, comments: 0, messages: 0, conversions: 0, reach: 0 });
+  const totalEng = totals.likes + totals.comments + totals.messages;
+  const er = totals.reach > 0 ? ((totalEng / totals.reach) * 100).toFixed(1) : (feedback.length > 0 ? Math.round(totalEng / feedback.length) : 0);
+  const cr = totals.reach > 0 ? ((totals.conversions / totals.reach) * 100).toFixed(2) : "0";
   return (
     <div className="space-y-4">
       <h2 className="text-lg font-bold flex items-center gap-2"><Gauge className="h-5 w-5 text-rose-500" />KPI Tracker</h2>
       <div className="grid grid-cols-2 gap-3">
-        <Card className="p-4"><p className="text-xs text-muted-foreground">Avg Engagement</p><p className="text-2xl font-bold text-primary">{avgEng}</p></Card>
-        <Card className="p-4"><p className="text-xs text-muted-foreground">Conversion Rate</p><p className="text-2xl font-bold text-primary">{cr}%</p></Card>
-        <Card className="p-4"><p className="text-xs text-muted-foreground">Total DM</p><p className="text-2xl font-bold">{totals.messages}</p></Card>
+        <Card className="p-4"><p className="text-xs text-muted-foreground">Engagement Rate</p><p className="text-2xl font-bold text-primary">{er}{totals.reach > 0 ? "%" : ""}</p><p className="text-[10px] text-muted-foreground">{totals.reach > 0 ? "dari reach" : "per konten"}</p></Card>
+        <Card className="p-4"><p className="text-xs text-muted-foreground">Conversion Rate</p><p className="text-2xl font-bold text-primary">{cr}%</p><p className="text-[10px] text-muted-foreground">{totals.reach > 0 ? "konversi/reach" : "belum ada reach"}</p></Card>
+        <Card className="p-4"><p className="text-xs text-muted-foreground">Total Reach</p><p className="text-2xl font-bold">{totals.reach > 0 ? `${(totals.reach / 1000).toFixed(1)}K` : "—"}</p></Card>
         <Card className="p-4"><p className="text-xs text-muted-foreground">Minggu Aktif</p><p className="text-2xl font-bold">{totalWeeks}</p></Card>
       </div>
       <Card className="p-5"><p className="text-xs font-semibold uppercase text-muted-foreground mb-3">Target KPI</p>
@@ -397,23 +418,62 @@ function KPIBar({ label, current, target }: { label: string; current: number; ta
 }
 
 function InsightView({ feedback, weekData }: { feedback: Feedback[]; weeks: Record<number, WeekPlan>; weekData: WeekPlan[] }) {
-  const topFormats: Record<string, number> = {};
-  weekData.forEach(w => w.days?.forEach(d => d.posts?.forEach(p => { topFormats[p.format] = (topFormats[p.format] ?? 0) + 1; })));
-  const sorted = Object.entries(topFormats).sort((a, b) => b[1] - a[1]);
+  const topFormats: Record<string, { count: number; likes: number; comments: number; messages: number }> = {};
+  weekData.forEach(w => w.days?.forEach(d => d.posts?.forEach(p => {
+    if (!topFormats[p.format]) topFormats[p.format] = { count: 0, likes: 0, comments: 0, messages: 0 };
+    topFormats[p.format].count++;
+  })));
+  // Enrich with feedback data per format
+  feedback.forEach(f => {
+    // We can't perfectly map feedback to format without week data cross-ref, so aggregate totals
+  });
+  const sorted = Object.entries(topFormats).sort((a, b) => b[1].count - a[1].count);
   const totalEng = feedback.reduce((s, f) => s + f.likes + f.comments + f.messages, 0);
   const totalConv = feedback.reduce((s, f) => s + f.conversions, 0);
+  const totalReach = feedback.reduce((s, f) => s + (f.reach || 0), 0);
+
+  // Historical comparison (last half vs first half of feedback)
+  const half = Math.floor(feedback.length / 2);
+  const firstHalf = feedback.slice(0, half);
+  const secondHalf = feedback.slice(half);
+  const engFirst = firstHalf.reduce((s, f) => s + f.likes + f.comments + f.messages, 0);
+  const engSecond = secondHalf.reduce((s, f) => s + f.likes + f.comments + f.messages, 0);
+  const engChange = engFirst > 0 ? Math.round(((engSecond - engFirst) / engFirst) * 100) : 0;
+  const convFirst = firstHalf.reduce((s, f) => s + f.conversions, 0);
+  const convSecond = secondHalf.reduce((s, f) => s + f.conversions, 0);
+  const convChange = convFirst > 0 ? Math.round(((convSecond - convFirst) / convFirst) * 100) : 0;
+
+  // Best posting times
+  const hourCounts: Record<number, number> = {};
+  feedback.forEach(f => { if (f.posted_at) { const h = new Date(f.posted_at).getHours(); hourCounts[h] = (hourCounts[h] ?? 0) + f.likes + f.comments + f.messages; } });
+  const bestHour = Object.entries(hourCounts).sort((a, b) => b[1] - a[1])[0];
+
   return (
     <div className="space-y-4">
       <h2 className="text-lg font-bold flex items-center gap-2"><Lightbulb className="h-5 w-5 text-amber-500" />AI Insights</h2>
+
+      {/* Historical comparison */}
+      {feedback.length >= 4 && <Card className="p-5"><p className="text-xs font-semibold uppercase text-muted-foreground mb-3">📈 Perbandingan Periode</p>
+        <div className="grid grid-cols-2 gap-3">
+          <div className={`rounded-lg p-3 ${engChange >= 0 ? "bg-emerald-50 border border-emerald-200" : "bg-rose-50 border border-rose-200"}`}><p className="text-xs text-muted-foreground">Engagement</p><p className="text-lg font-bold">{engChange >= 0 ? "+" : ""}{engChange}%</p><p className="text-[10px] text-muted-foreground">{engChange >= 0 ? "↑ Naik" : "↓ Turun"} vs periode lalu</p></div>
+          <div className={`rounded-lg p-3 ${convChange >= 0 ? "bg-emerald-50 border border-emerald-200" : "bg-rose-50 border border-rose-200"}`}><p className="text-xs text-muted-foreground">Konversi</p><p className="text-lg font-bold">{convChange >= 0 ? "+" : ""}{convChange}%</p><p className="text-[10px] text-muted-foreground">{convChange >= 0 ? "↑ Naik" : "↓ Turun"} vs periode lalu</p></div>
+        </div>
+      </Card>}
+
+      {/* Best time */}
+      {bestHour && <Card className="p-5"><p className="text-xs font-semibold uppercase text-muted-foreground mb-2">⏰ Waktu Terbaik Posting</p><p className="text-sm">Jam <strong>{bestHour[0]}:00</strong> menghasilkan engagement tertinggi ({bestHour[1]} total interaksi)</p></Card>}
+
+      {/* Format breakdown */}
       <Card className="p-5 space-y-3">
-        {sorted[0] && <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-3"><p className="text-sm text-emerald-800">✅ Format terbaik: <strong>{sorted[0][0]}</strong> ({sorted[0][1]} konten)</p></div>}
-        {sorted[1] && <div className="rounded-lg bg-blue-50 border border-blue-200 p-3"><p className="text-sm text-blue-800">💡 Coba lebih banyak <strong>{sorted[1][0]}</strong></p></div>}
-        {totalConv > 0 && <div className="rounded-lg bg-amber-50 border border-amber-200 p-3"><p className="text-sm text-amber-800">🎯 {totalConv} konversi = {((totalConv / Math.max(feedback.length, 1)) * 100).toFixed(1)}% CR</p></div>}
-        {totalEng > 0 && <div className="rounded-lg bg-violet-50 border border-violet-200 p-3"><p className="text-sm text-violet-800">📊 Avg engagement: {Math.round(totalEng / Math.max(feedback.length, 1))} per konten</p></div>}
-        <div className="rounded-lg bg-rose-50 border border-rose-200 p-3"><p className="text-sm text-rose-800">🔥 Posting konsisten setiap hari untuk bangun habit audiens</p></div>
+        <p className="text-xs font-semibold uppercase text-muted-foreground">💡 Saran AI</p>
+        {sorted[0] && <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-3"><p className="text-sm text-emerald-800">✅ Format terbaik: <strong>{sorted[0][0]}</strong> ({sorted[0][1].count} konten)</p></div>}
+        {sorted[1] && <div className="rounded-lg bg-blue-50 border border-blue-200 p-3"><p className="text-sm text-blue-800">💡 Variasikan dengan <strong>{sorted[1][0]}</strong></p></div>}
+        {totalReach > 0 && <div className="rounded-lg bg-amber-50 border border-amber-200 p-3"><p className="text-sm text-amber-800">🎯 CR: {((totalConv / totalReach) * 100).toFixed(2)}% | ER: {((totalEng / totalReach) * 100).toFixed(1)}%</p></div>}
+        <div className="rounded-lg bg-rose-50 border border-rose-200 p-3"><p className="text-sm text-rose-800">🔥 Konsistensi = growth. Posting setiap hari di jam yang sama.</p></div>
       </Card>
+
       {sorted.length > 0 && <Card className="p-5"><p className="text-xs font-semibold uppercase text-muted-foreground mb-3">Format Distribution</p>
-        <div className="space-y-2">{sorted.slice(0, 5).map(([fmt, count], i) => <div key={i} className="flex items-center gap-3"><span className="text-xs w-20 truncate">{fmt}</span><div className="flex-1 h-2 rounded-full bg-muted overflow-hidden"><div className="h-full rounded-full bg-primary" style={{ width: `${(count / (sorted[0][1])) * 100}%` }} /></div><span className="text-xs text-muted-foreground">{count}</span></div>)}</div>
+        <div className="space-y-2">{sorted.slice(0, 5).map(([fmt, data], i) => <div key={i} className="flex items-center gap-3"><span className="text-xs w-20 truncate">{fmt}</span><div className="flex-1 h-2 rounded-full bg-muted overflow-hidden"><div className="h-full rounded-full bg-primary" style={{ width: `${(data.count / (sorted[0][1].count)) * 100}%` }} /></div><span className="text-xs text-muted-foreground">{data.count}</span></div>)}</div>
       </Card>}
     </div>
   );
