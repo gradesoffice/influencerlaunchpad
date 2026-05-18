@@ -141,7 +141,7 @@ export default function DashboardPage() {
   const conversionRate = totalReach > 0 ? ((totalConversions / totalReach) * 100).toFixed(2) : "0";
 
   if (initialLoading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
-  if (showForm || !strategy) return <FormView form={form} update={update} loading={loadingStrategy} onGenerate={generateStrategy} onLogout={handleLogout} onBack={strategy ? () => setShowForm(false) : undefined} />;
+  if (showForm || !strategy) return <FormView form={form} update={update} loading={loadingStrategy} onGenerate={generateStrategy} onLogout={handleLogout} onBack={strategy ? () => setShowForm(false) : undefined} userPlan={userPlan} onShowPricing={() => setShowPricing(true)} />;
 
   return (
     <div className="min-h-screen bg-[#faf9f7] flex">
@@ -366,7 +366,7 @@ function PricingModal({ onClose, onUpgrade }: { onClose: () => void; onUpgrade: 
   );
 }
 
-function FormView({ form, update, loading, onGenerate, onLogout, onBack }: { form: FormState; update: <K extends keyof FormState>(k: K, v: FormState[K]) => void; loading: boolean; onGenerate: () => void; onLogout: () => void; onBack?: () => void }) {
+function FormView({ form, update, loading, onGenerate, onLogout, onBack, userPlan, onShowPricing }: { form: FormState; update: <K extends keyof FormState>(k: K, v: FormState[K]) => void; loading: boolean; onGenerate: () => void; onLogout: () => void; onBack?: () => void; userPlan: string; onShowPricing: () => void }) {
   return (
     <div className="min-h-screen bg-[#faf9f7] p-6">
       <Toaster richColors position="top-center" />
@@ -376,7 +376,7 @@ function FormView({ form, update, loading, onGenerate, onLogout, onBack }: { for
         <p className="text-sm text-muted-foreground mb-6">Isi profil akun medsos kamu.</p>
         <div className="grid gap-4">
           <div className="grid gap-1.5"><Label className="text-sm">Niche / Topik</Label><Input value={form.niche} onChange={e => update("niche", e.target.value)} placeholder="Coaching produktivitas" /></div>
-          <div className="grid grid-cols-2 gap-3"><div className="grid gap-1.5"><Label className="text-sm">Platform</Label><select value={form.platform} onChange={e => update("platform", e.target.value)} className="h-10 rounded-md border border-input bg-background px-3 text-sm"><option>Instagram</option><option>TikTok</option><option>YouTube</option><option>Twitter/X</option><option>LinkedIn</option><option>Threads</option><option>Facebook</option><option>WhatsApp Channel</option></select></div><div className="grid gap-1.5"><Label className="text-sm">Konten/hari</Label><Input type="number" min={1} max={userPlan === "business" ? 100 : userPlan === "pro" ? 10 : 5} value={form.postsPerDay} onChange={e => { const max = userPlan === "business" ? 100 : userPlan === "pro" ? 10 : 5; const v = Math.max(1, Math.min(max, parseInt(e.target.value) || 1)); if (parseInt(e.target.value) > max) { toast.error(`Max ${max} konten/hari di plan ${userPlan}. Upgrade untuk lebih.`); setShowPricing(true); } update("postsPerDay", v); }} /><p className="text-[9px] text-muted-foreground">Max: {userPlan === "business" ? 100 : userPlan === "pro" ? 10 : 5}</p></div></div>
+          <div className="grid grid-cols-2 gap-3"><div className="grid gap-1.5"><Label className="text-sm">Platform</Label><select value={form.platform} onChange={e => update("platform", e.target.value)} className="h-10 rounded-md border border-input bg-background px-3 text-sm"><option>Instagram</option><option>TikTok</option><option>YouTube</option><option>Twitter/X</option><option>LinkedIn</option><option>Threads</option><option>Facebook</option><option>WhatsApp Channel</option></select></div><div className="grid gap-1.5"><Label className="text-sm">Konten/hari</Label><Input type="number" min={1} max={userPlan === "business" ? 100 : userPlan === "pro" ? 10 : 5} value={form.postsPerDay} onChange={e => { const max = userPlan === "business" ? 100 : userPlan === "pro" ? 10 : 5; const v = Math.max(1, Math.min(max, parseInt(e.target.value) || 1)); if (parseInt(e.target.value) > max) { toast.error(`Max ${max} konten/hari di plan ${userPlan}.`); onShowPricing(); } update("postsPerDay", v); }} /><p className="text-[9px] text-muted-foreground">Max: {userPlan === "business" ? 100 : userPlan === "pro" ? 10 : 5}</p></div></div>
           <div className="grid gap-1.5"><Label className="text-sm">Target Audiens</Label><Textarea rows={2} value={form.audience} onChange={e => update("audience", e.target.value)} placeholder="Freelancer 22-35 thn" /></div>
           <div className="grid gap-1.5"><Label className="text-sm">Pesan Utama</Label><Textarea rows={2} value={form.message} onChange={e => update("message", e.target.value)} /></div>
           <div className="grid gap-1.5"><Label className="text-sm">Tujuan Konversi</Label><Input value={form.conversionGoal} onChange={e => update("conversionGoal", e.target.value)} /></div>
