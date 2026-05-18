@@ -131,6 +131,7 @@ export default function DashboardPage() {
   const totalWeeksAvailable = strategy?.phases.reduce((s, p) => s + p.weeklyThemes.length, 0) ?? 0;
   const completedWeeks = Object.keys(weeks).length;
   const progressPct = totalWeeksAvailable > 0 ? Math.round((completedWeeks / totalWeeksAvailable) * 100) : 0;
+  const currentWeek = completedWeeks + 1;
   const fbVals = Object.values(feedback);
   const totalLikes = fbVals.reduce((s, f) => s + f.likes, 0);
   const totalConversions = fbVals.reduce((s, f) => s + f.conversions, 0);
@@ -181,11 +182,62 @@ export default function DashboardPage() {
           {userPlan === "free" && activeNav === "home" && <button onClick={() => setShowPricing(true)} className="w-full text-left rounded-2xl bg-rose-50/80 px-4 py-3 flex items-center gap-3"><span className="text-sm">⚡</span><p className="text-xs text-rose-600 flex-1">Upgrade untuk akses penuh</p><ChevronRight className="h-4 w-4 text-rose-400" /></button>}
 
           {/* KPI - clean, borderless */}
-          {activeNav === "home" && <div className="grid grid-cols-3 gap-3">
-            <div className="rounded-2xl bg-white p-4 text-center shadow-sm"><Heart className="h-5 w-5 text-rose-400 mx-auto mb-1" /><p className="text-lg font-bold">{totalLikes}</p><p className="text-[10px] text-muted-foreground">Likes</p></div>
-            <div className="rounded-2xl bg-white p-4 text-center shadow-sm"><TrendingUp className="h-5 w-5 text-violet-400 mx-auto mb-1" /><p className="text-lg font-bold">{totalReach > 0 ? `${(totalReach / 1000).toFixed(1)}K` : progressPct + "%"}</p><p className="text-[10px] text-muted-foreground">Reach</p></div>
-            <div className="rounded-2xl bg-white p-4 text-center shadow-sm"><Send className="h-5 w-5 text-emerald-400 mx-auto mb-1" /><p className="text-lg font-bold">{totalDM}</p><p className="text-[10px] text-muted-foreground">DM</p></div>
-          </div>}
+          {activeNav === "home" && <>
+            {/* Progress ring centered */}
+            <div className="flex justify-center py-2">
+              <div className="relative h-20 w-20">
+                <svg className="h-20 w-20 -rotate-90"><circle cx="40" cy="40" r="34" fill="none" stroke="#f3f4f6" strokeWidth="5" /><circle cx="40" cy="40" r="34" fill="none" stroke="hsl(var(--primary))" strokeWidth="5" strokeDasharray={`${(completedWeeks / Math.max(totalWeeksAvailable, 1)) * 213} 213`} strokeLinecap="round" /></svg>
+                <span className="absolute inset-0 flex items-center justify-center text-lg font-bold">{progressPct}%</span>
+              </div>
+            </div>
+
+            {/* Week circles - horizontal scroll */}
+            <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4">
+              {strategy.phases.flatMap((phase, pi) => {
+                const weekOffset = strategy.phases.slice(0, pi).reduce((s, p) => s + p.weeklyThemes.length, 0);
+                return phase.weeklyThemes.map((_, wi) => {
+                  const wn = weekOffset + wi + 1;
+                  const done = !!weeks[wn];
+                  const isCurrent = wn === currentWeek;
+                  return <button key={wn} onClick={() => { if (done) setOpenWeek(openWeek === wn ? null : wn); else generateWeek(wn, phase.name, phase.weeklyThemes[wi]); }} className={`h-10 w-10 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition ${isCurrent ? "bg-primary text-white ring-2 ring-primary/30 animate-pulse-subtle" : done ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground/50"}`}>
+                    {loadingWeek === wn ? <Loader2 className="h-4 w-4 animate-spin" /> : done ? <Check className="h-4 w-4" /> : `W${wn}`}
+                  </button>;
+                });
+              })}
+            </div>
+
+            {/* Active week content - minimal */}
+            {openWeek && weeks[openWeek] && <div className="space-y-1">
+              <p className="text-xs font-semibold text-primary">W{openWeek}</p>
+              {weeks[openWeek].days.map((d, di) => (
+                <div key={di} className="rounded-xl bg-white p-3 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-medium">Day {d.day - (openWeek - 1) * 7}</p>
+                    <div className="flex gap-1">
+                      {d.posts.map((post, pi2) => {
+                        const fkey = `${openWeek}|${d.day}|${post.slot}|${form.platforms[0]?.toLowerCase() || "instagram"}`;
+                        const isCopied = copiedKey === fkey;
+                        return <div key={pi2} className="flex gap-1">
+                          <button onClick={() => copyPost(fkey, post)} className={`h-7 w-7 rounded-lg flex items-center justify-center text-xs ${isCopied ? "bg-emerald-100 text-emerald-600" : "bg-muted text-muted-foreground hover:bg-primary/10 hover:text-primary"}`} title="Copy">{isCopied ? "✓" : "📋"}</button>
+                          <button onClick={() => setOpenFeedback(openFeedback === fkey ? null : fkey)} className="h-7 w-7 rounded-lg flex items-center justify-center text-xs bg-muted text-muted-foreground hover:bg-primary/10 hover:text-primary" title="Track">📊</button>
+                        </div>;
+                      })}
+                    </div>
+                  </div>
+                  {/* Inline feedback for first post if open */}
+                  {d.posts.map((post, pi2) => {
+                    const fkey = `${openWeek}|${d.day}|${post.slot}|${form.platforms[0]?.toLowerCase() || "instagram"}`;
+                    if (openFeedback !== fkey) return null;
+                    const fb = feedback[fkey];
+                    return <div key={pi2} className="mt-2 grid grid-cols-5 gap-1"><MI icon="👁️" value={fb?.reach ?? 0} onChange={v => updateFeedback(fkey, { reach: v, platform: form.platforms[0]?.toLowerCase() || "instagram" })} /><MI icon="❤️" value={fb?.likes ?? 0} onChange={v => updateFeedback(fkey, { likes: v, platform: form.platforms[0]?.toLowerCase() || "instagram" })} /><MI icon="💬" value={fb?.comments ?? 0} onChange={v => updateFeedback(fkey, { comments: v, platform: form.platforms[0]?.toLowerCase() || "instagram" })} /><MI icon="📩" value={fb?.messages ?? 0} onChange={v => updateFeedback(fkey, { messages: v, platform: form.platforms[0]?.toLowerCase() || "instagram" })} /><MI icon="🛒" value={fb?.conversions ?? 0} onChange={v => updateFeedback(fkey, { conversions: v, platform: form.platforms[0]?.toLowerCase() || "instagram" })} /></div>;
+                  })}
+                </div>
+              ))}
+            </div>}
+
+            {/* If no week open, show current week hint */}
+            {!openWeek && <div className="text-center py-4"><p className="text-xs text-muted-foreground">Tap minggu aktif untuk lihat konten</p></div>}
+          </>}
 
           {/* Phases - clean */}
           {(activeNav === "home" || activeNav === "konten") && strategy.phases.map((phase, pi) => {
