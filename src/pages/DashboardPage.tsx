@@ -180,12 +180,45 @@ export default function DashboardPage() {
           {/* Plan warning - subtle */}
           {userPlan === "free" && activeNav === "home" && <button onClick={() => setShowPricing(true)} className="w-full text-left rounded-2xl bg-rose-50/80 px-4 py-3 flex items-center gap-3"><span className="text-sm">⚡</span><p className="text-xs text-rose-600 flex-1">Upgrade untuk akses penuh</p><ChevronRight className="h-4 w-4 text-rose-400" /></button>}
 
-          {/* KPI - clean, borderless */}
-          {activeNav === "home" && <div className="grid grid-cols-3 gap-3">
-            <div className="rounded-2xl bg-white p-4 text-center shadow-sm"><Heart className="h-5 w-5 text-rose-400 mx-auto mb-1" /><p className="text-lg font-bold">{totalLikes}</p><p className="text-[10px] text-muted-foreground">Likes</p></div>
-            <div className="rounded-2xl bg-white p-4 text-center shadow-sm"><TrendingUp className="h-5 w-5 text-violet-400 mx-auto mb-1" /><p className="text-lg font-bold">{totalReach > 0 ? `${(totalReach / 1000).toFixed(1)}K` : progressPct + "%"}</p><p className="text-[10px] text-muted-foreground">Reach</p></div>
-            <div className="rounded-2xl bg-white p-4 text-center shadow-sm"><Send className="h-5 w-5 text-emerald-400 mx-auto mb-1" /><p className="text-lg font-bold">{totalDM}</p><p className="text-[10px] text-muted-foreground">DM</p></div>
-          </div>}
+          {/* HOME VIEW */}
+          {activeNav === "home" && <>
+            {/* Motivational quote */}
+            <div className="text-center py-3">
+              <p className="text-sm font-bold text-foreground">Konsisten = Algoritma FYP 🔥</p>
+            </div>
+
+            {/* Streak */}
+            <div className="rounded-2xl bg-white p-4 shadow-sm flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-amber-100 flex items-center justify-center text-lg">🎯</div>
+                <div><p className="text-xs text-muted-foreground">Streak hari ini</p><p className="text-lg font-bold">{Object.values(feedback).filter(f => f.posted_at && new Date(f.posted_at).toDateString() === new Date().toDateString()).length} <span className="text-xs font-normal text-muted-foreground">/ {form.postsPerDay} post</span></p></div>
+              </div>
+              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center"><TrendingUp className="h-5 w-5 text-primary" /></div>
+            </div>
+
+            {/* Mini analytics preview (locked for free) */}
+            <div className={`rounded-2xl bg-white p-4 shadow-sm ${userPlan === "free" ? "opacity-50" : ""}`} onClick={() => userPlan === "free" ? setShowPricing(true) : setActiveNav("analitik")}>
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-xs font-semibold">📊 Performa</p>
+                {userPlan === "free" && <Badge variant="outline" className="text-[9px]">🔒 Pro</Badge>}
+              </div>
+              <div className="grid grid-cols-4 gap-2 text-center">
+                <div><p className="text-lg font-bold">{totalLikes}</p><p className="text-[9px] text-muted-foreground">❤️</p></div>
+                <div><p className="text-lg font-bold">{totalReach > 0 ? `${(totalReach/1000).toFixed(1)}K` : "—"}</p><p className="text-[9px] text-muted-foreground">👁️</p></div>
+                <div><p className="text-lg font-bold">{totalDM}</p><p className="text-[9px] text-muted-foreground">📩</p></div>
+                <div><p className="text-lg font-bold">{totalConversions}</p><p className="text-[9px] text-muted-foreground">🛒</p></div>
+              </div>
+            </div>
+
+            {/* Progress */}
+            <div className="rounded-2xl bg-white p-4 shadow-sm flex items-center gap-4">
+              <div className="relative h-12 w-12 shrink-0">
+                <svg className="h-12 w-12 -rotate-90"><circle cx="24" cy="24" r="20" fill="none" stroke="#f3f4f6" strokeWidth="4" /><circle cx="24" cy="24" r="20" fill="none" stroke="hsl(var(--primary))" strokeWidth="4" strokeDasharray={`${progressPct * 1.26} 126`} strokeLinecap="round" /></svg>
+                <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold">{progressPct}%</span>
+              </div>
+              <div><p className="text-xs font-semibold">{completedWeeks}/{totalWeeksAvailable} minggu</p><p className="text-[10px] text-muted-foreground">Terus gas! 💪</p></div>
+            </div>
+          </>}
 
           {/* Phases - clean */}
           {(activeNav === "home" || activeNav === "konten") && strategy.phases.map((phase, pi) => {
