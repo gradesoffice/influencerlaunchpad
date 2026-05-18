@@ -140,7 +140,7 @@ export default function DashboardPage() {
   const conversionRate = totalReach > 0 ? ((totalConversions / totalReach) * 100).toFixed(2) : "0";
 
   if (initialLoading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
-  if (showForm || !strategy) return <FormView form={form} update={update} loading={loadingStrategy} onGenerate={generateStrategy} onLogout={handleLogout} />;
+  if (showForm || !strategy) return <FormView form={form} update={update} loading={loadingStrategy} onGenerate={generateStrategy} onLogout={handleLogout} onBack={strategy ? () => setShowForm(false) : undefined} />;
 
   return (
     <div className="min-h-screen bg-[#faf9f7] flex">
@@ -361,12 +361,12 @@ function PricingModal({ onClose, onUpgrade }: { onClose: () => void; onUpgrade: 
   );
 }
 
-function FormView({ form, update, loading, onGenerate, onLogout }: { form: FormState; update: <K extends keyof FormState>(k: K, v: FormState[K]) => void; loading: boolean; onGenerate: () => void; onLogout: () => void }) {
+function FormView({ form, update, loading, onGenerate, onLogout, onBack }: { form: FormState; update: <K extends keyof FormState>(k: K, v: FormState[K]) => void; loading: boolean; onGenerate: () => void; onLogout: () => void; onBack?: () => void }) {
   return (
     <div className="min-h-screen bg-[#faf9f7] p-6">
       <Toaster richColors position="top-center" />
       <div className="mx-auto max-w-lg">
-        <div className="flex items-center justify-between mb-8"><div className="flex items-center gap-2 font-bold"><Rocket className="h-5 w-5 text-primary" />Launchpad</div><button onClick={onLogout} className="text-xs text-muted-foreground">Logout</button></div>
+        <div className="flex items-center justify-between mb-8"><div className="flex items-center gap-2 font-bold"><Rocket className="h-5 w-5 text-primary" />Launchpad</div><div className="flex items-center gap-3">{onBack && <button onClick={onBack} className="text-xs text-primary font-medium">← Kembali</button>}<button onClick={onLogout} className="text-xs text-muted-foreground">Logout</button></div></div>
         <h1 className="text-2xl font-bold mb-1">Buat Strategi Baru</h1>
         <p className="text-sm text-muted-foreground mb-6">Isi profil akun medsos kamu.</p>
         <div className="grid gap-4">
