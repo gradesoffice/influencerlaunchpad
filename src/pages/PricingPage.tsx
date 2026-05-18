@@ -15,7 +15,7 @@ export default function PricingPage() {
   useEffect(() => {
     if (document.getElementById("midtrans-snap")) return;
     const s = document.createElement("script");
-    s.id = "midtrans-snap"; s.src = "https://app.sandbox.midtrans.com/snap/snap.js";
+    s.id = "midtrans-snap"; s.src = "https://app.midtrans.com/snap/snap.js";
     s.setAttribute("data-client-key", import.meta.env.VITE_MIDTRANS_CLIENT_KEY || "");
     document.head.appendChild(s);
   }, []);
