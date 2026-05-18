@@ -2,14 +2,15 @@
 -- This is the complete schema for Influencer Launchpad
 
 -- Strategies
+
 CREATE TABLE IF NOT EXISTS public.strategies (
-  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  id uuid DEFAULT gen_random_uid() PRIMARY KEY,
   user_id uuid NOT NULL,
   niche text NOT NULL,
   platform text NOT NULL,
   audience text NOT NULL,
   message text NOT NULL,
-  conversion_goal text NOT NULL,
+  conversion_goal text NOT NULL, tern
   tone text DEFAULT '',
   posts_per_day integer DEFAULT 2,
   brand jsonb NOT NULL,
@@ -100,3 +101,26 @@ CREATE INDEX IF NOT EXISTS idx_strategies_user ON public.strategies(user_id);
 CREATE INDEX IF NOT EXISTS idx_weeks_strategy ON public.weeks(strategy_id);
 CREATE INDEX IF NOT EXISTS idx_feedback_strategy ON public.feedback(strategy_id);
 CREATE INDEX IF NOT EXISTS idx_usage_user_action ON public.usage_logs(user_id, action, created_at);
+
+-- Promo Codes
+CREATE TABLE IF NOT EXISTS public.promo_codes (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  code text NOT NULL UNIQUE,
+  discount_percent integer NOT NULL DEFAULT 0,
+  max_uses integer,
+  used_count integer DEFAULT 0,
+  expires_at timestamptz,
+  created_at timestamptz DEFAULT now()
+);
+
+-- Promo codes readable by anyone (no RLS needed, public lookup)
+ALTER TABLE public.promo_codes ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Anyone can read promo codes" ON public.promo_codes FOR SELECT USING (true);
+CREATE POLICY "Anyone can update promo used_count" ON public.promo_codes FOR UPDATE USING (true) WITH CHECK (true);
+
+-- Seed some promo codes
+INSERT INTO public.promo_codes (code, discount_percent, max_uses) VALUES
+  ('LAUNCH50', 50, 100),
+  ('EARLY30', 30, 200),
+  ('FRIEND20', 20, NULL)
+ON CONFLICT (code) DO NOTHING;

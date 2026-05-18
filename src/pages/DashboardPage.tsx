@@ -277,19 +277,20 @@ function PricingModal({ onClose, onUpgrade }: { onClose: () => void; onUpgrade: 
   const applyCode = async () => {
     if (!code.trim()) return;
     setApplying(true);
-    // TODO: validate code against DB. For now, hardcoded codes:
-    const codes: Record<string, { discount: number; label: string }> = {
-      "LAUNCH50": { discount: 50, label: "50% off" },
-      "EARLY30": { discount: 30, label: "30% off" },
-      "FRIEND20": { discount: 20, label: "20% off" },
-    };
-    const found = codes[code.toUpperCase()];
-    if (found) {
-      toast.success(`Kode "${code}" aktif! Diskon ${found.label} diterapkan.`);
-    } else {
-      toast.error("Kode tidak valid.");
-    }
-    setApplying(false);
+    try {
+      const { data, error } = await supabase
+        .from("promo_codes")
+        .select("code, discount_percent, max_uses, used_count, expires_at")
+        .eq("code", code.toUpperCase().trim())
+        .single();
+      if (error || !data) { toast.error("Kode tidak valid."); return; }
+      if (data.expires_at && new Date(data.expires_at) < new Date()) { toast.error("Kode sudah expired."); return; }
+      if (data.max_uses && data.used_count >= data.max_uses) { toast.error("Kode sudah habis dipakai."); return; }
+      toast.success(`Kode "${code}" aktif! Diskon ${data.discount_percent}% diterapkan.`);
+      // Increment used_count
+      await supabase.from("promo_codes").update({ used_count: data.used_count + 1 }).eq("code", data.code);
+    } catch { toast.error("Gagal memvalidasi kode."); }
+    finally { setApplying(false); }
   };
 
   return (
