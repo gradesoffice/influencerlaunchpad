@@ -284,11 +284,11 @@ export default function DashboardPage() {
       {/* Mobile bottom nav - clean */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-lg border-t border-border/50 px-4 py-2 z-20">
         <div className="flex items-center justify-around">
-          <button onClick={() => setActiveNav("home")} className={`p-2 rounded-xl transition ${activeNav === "home" ? "text-primary bg-primary/10" : "text-muted-foreground"}`}><Home className="h-5 w-5" /></button>
+          <button onClick={() => setActiveNav("home")} className={`p-2 rounded-xl transition ${activeNav === "home" || activeNav === "konten" ? "text-primary bg-primary/10" : "text-muted-foreground"}`}><Home className="h-5 w-5" /></button>
           <button onClick={() => setActiveNav("roadmap")} className={`p-2 rounded-xl transition ${activeNav === "roadmap" ? "text-primary bg-primary/10" : "text-muted-foreground"}`}><Map className="h-5 w-5" /></button>
-          <button onClick={() => setActiveNav("konten")} className={`p-2 rounded-xl transition ${activeNav === "konten" ? "text-primary bg-primary/10" : "text-muted-foreground"}`}><FileText className="h-5 w-5" /></button>
-          <button onClick={() => userPlan !== "free" ? setActiveNav("analitik") : setShowPricing(true)} className={`p-2 rounded-xl transition ${activeNav === "analitik" ? "text-primary bg-primary/10" : "text-muted-foreground/50"}`}><BarChart3 className="h-5 w-5" /></button>
-          <button onClick={() => setShowPricing(true)} className="p-2 rounded-xl text-amber-400"><Crown className="h-5 w-5" /></button>
+          <button onClick={() => userPlan !== "free" ? setActiveNav("audiens") : setShowPricing(true)} className={`p-2 rounded-xl transition ${activeNav === "audiens" ? "text-primary bg-primary/10" : "text-muted-foreground"}`}><Users className="h-5 w-5" /></button>
+          <button onClick={() => userPlan !== "free" ? setActiveNav("analitik") : setShowPricing(true)} className={`p-2 rounded-xl transition ${activeNav === "analitik" || activeNav === "kpi" ? "text-primary bg-primary/10" : "text-muted-foreground"}`}><BarChart3 className="h-5 w-5" /></button>
+          <button onClick={() => userPlan !== "free" ? setActiveNav("insight") : setShowPricing(true)} className={`p-2 rounded-xl transition ${activeNav === "insight" ? "text-primary bg-primary/10" : "text-muted-foreground"}`}><Lightbulb className="h-5 w-5" /></button>
         </div>
       </div>
       <div className="md:hidden h-14" />
