@@ -15,7 +15,7 @@ type FormState = { niche: string; platform: string; audience: string; message: s
 type Strategy = { brand: { persona: string; voice: string; visualStyle: string; tagline: string; contentPillars: { name: string; description: string }[]; hashtags: string[]; dosAndDonts: { dos: string[]; donts: string[] } }; phases: { name: string; days: string; objective: string; kpis: string[]; weeklyThemes: string[] }[] };
 type WeekPlan = { weekNumber: number; theme: string; focus: string; days: { day: number; dayLabel: string; dailyGoal: string; posts: { slot: string; format: string; hook: string; caption: string; cta: string; hashtags: string[]; visualIdea: string; conversionTie: string }[] }[] };
 type Feedback = { likes: number; comments: number; messages: number; conversions: number; note: string; reach: number; posted_at: string | null; platform: string };
-const PLATFORMS = ["Instagram", "TikTok", "YouTube", "Twitter/X", "LinkedIn"];
+const PLATFORMS = ["TikTok", "Instagram", "Threads", "Facebook", "YouTube", "Twitter/X", "WhatsApp Channel", "LinkedIn"];
 const initial: FormState = { niche: "", platform: "Instagram", audience: "", message: "", conversionGoal: "", tone: "", postsPerDay: 2, initialFollowers: {}, platforms: ["Instagram"] };
 
 export default function DashboardPage() {
