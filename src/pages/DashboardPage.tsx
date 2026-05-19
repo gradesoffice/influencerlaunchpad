@@ -49,7 +49,7 @@ export default function DashboardPage() {
         if (savedWeeks) { const m: Record<number, WeekPlan> = {}; savedWeeks.forEach(w => m[w.week_number] = w.data as any); setWeeks(m); }
         const { data: savedFb } = await supabase.from("feedback").select("week_number, day, slot, likes, comments, messages, conversions, note, reach, posted_at, platform").eq("strategy_id", s.id);
         if (savedFb?.length) { const m: Record<string, Feedback> = {}; savedFb.forEach(f => m[`${f.week_number}|${f.day}|${f.slot}|${f.platform || "instagram"}`] = { ...f, platform: f.platform || "instagram" }); setFeedback(m); }
-      } else { setShowForm(true); }
+      } else { /* no strategy — will show empty state in dashboard */ }
       // Load user plan
       const { data: planRow } = await supabase.from("user_plans").select("plan, expires_at").limit(1).single();
       if (planRow && (!planRow.expires_at || new Date(planRow.expires_at) > new Date())) {
