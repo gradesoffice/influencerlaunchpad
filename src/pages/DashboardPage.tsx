@@ -141,7 +141,10 @@ export default function DashboardPage() {
   const conversionRate = totalReach > 0 ? ((totalConversions / totalReach) * 100).toFixed(2) : "0";
 
   if (initialLoading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
-  if (showForm || !strategy) return <FormView form={form} update={update} loading={loadingStrategy} onGenerate={generateStrategy} onLogout={handleLogout} onBack={strategy ? () => setShowForm(false) : undefined} userPlan={userPlan} onShowPricing={() => setShowPricing(true)} />;
+  if (showForm) return <FormView form={form} update={update} loading={loadingStrategy} onGenerate={generateStrategy} onLogout={handleLogout} onBack={strategy ? () => setShowForm(false) : undefined} userPlan={userPlan} onShowPricing={() => setShowPricing(true)} />;
+
+  // Empty state — no strategy but show dashboard shell
+  const emptyState = !strategy;
 
   return (
     <div className="min-h-screen bg-[#faf9f7] flex">
@@ -171,12 +174,25 @@ export default function DashboardPage() {
         <div className="max-w-4xl mx-auto space-y-6">
           {/* Header - minimal */}
           <div className="flex items-center justify-between">
-            <p className="text-sm font-semibold">{userName || form.niche.split(" ")[0]} 👋</p>
+            <p className="text-sm font-semibold">{userName || "Hey"} 👋</p>
             <div className="flex items-center gap-3">
               <button onClick={() => setShowForm(true)} title="Edit"><Settings className="h-5 w-5 text-muted-foreground/60 hover:text-primary transition" /></button>
               <button onClick={() => setShowPricing(true)} title="Upgrade"><Crown className="h-5 w-5 text-amber-400" /></button>
             </div>
           </div>
+
+          {/* Empty state */}
+          {emptyState && (
+            <div className="text-center py-16 space-y-4">
+              <div className="mx-auto h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center"><Rocket className="h-8 w-8 text-primary" /></div>
+              <h2 className="text-lg font-bold">Daftarkan brand-mu di sini</h2>
+              <p className="text-sm text-muted-foreground max-w-xs mx-auto">Buat strategi pertama dan mulai perjalanan menuju influencer.</p>
+              <Button onClick={() => setShowForm(true)} className="text-primary-foreground" style={{ background: "var(--gradient-hero)" }}><Sparkles className="mr-2 h-4 w-4" />Mulai Sekarang</Button>
+            </div>
+          )}
+
+          {/* Rest of content only if strategy exists */}
+          {strategy && <>
 
           {/* Plan warning - subtle */}
           {userPlan === "free" && activeNav === "home" && <button onClick={() => setShowPricing(true)} className="w-full text-left rounded-2xl bg-rose-50/80 px-4 py-3 flex items-center gap-3"><span className="text-sm">⚡</span><p className="text-xs text-rose-600 flex-1">Upgrade untuk akses penuh</p><ChevronRight className="h-4 w-4 text-rose-400" /></button>}
@@ -283,6 +299,7 @@ export default function DashboardPage() {
 
           {/* Roadmap View */}
           {activeNav === "roadmap" && strategy && <RoadmapView strategy={strategy} weeks={weeks} completedWeeks={completedWeeks} totalWeeksAvailable={totalWeeksAvailable} />}
+          </>}
         </div>
       </main>
 
@@ -386,8 +403,8 @@ function FormView({ form, update, loading, onGenerate, onLogout, onBack, userPla
     await supabase.from("strategies").delete().eq("id", id);
     setBrands(b => b.filter(x => x.id !== id));
     toast.success("Brand dihapus");
-    // If no brands left, reload to show form
-    if (brands.length <= 1) window.location.reload();
+    // If no brands left, reload to reset dashboard
+    if (brands.length <= 1) window.location.href = "/";
   };
 
   return (
