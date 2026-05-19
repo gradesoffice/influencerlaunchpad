@@ -367,12 +367,42 @@ function PricingModal({ onClose, onUpgrade }: { onClose: () => void; onUpgrade: 
 }
 
 function FormView({ form, update, loading, onGenerate, onLogout, onBack, userPlan, onShowPricing }: { form: FormState; update: <K extends keyof FormState>(k: K, v: FormState[K]) => void; loading: boolean; onGenerate: () => void; onLogout: () => void; onBack?: () => void; userPlan: string; onShowPricing: () => void }) {
+  const [brands, setBrands] = useState<{ id: string; niche: string; platform: string }[]>([]);
+  const [loadingBrands, setLoadingBrands] = useState(true);
+
+  useEffect(() => {
+    supabase.from("strategies").select("id, niche, platform").order("created_at", { ascending: false }).then(({ data }) => { setBrands(data ?? []); setLoadingBrands(false); });
+  }, []);
+
+  const maxBrands = userPlan === "business" ? 5 : userPlan === "pro" ? 1 : 1;
+
+  const switchBrand = (id: string) => {
+    // Reload page with this strategy
+    window.location.href = "/";
+  };
+
   return (
     <div className="min-h-screen bg-[#faf9f7] p-6">
       <Toaster richColors position="top-center" />
       <div className="mx-auto max-w-lg">
         <div className="flex items-center justify-between mb-8"><div className="flex items-center gap-2 font-bold"><Rocket className="h-5 w-5 text-primary" />Launchpad</div><div className="flex items-center gap-3">{onBack && <button onClick={onBack} className="text-xs text-primary font-medium">← Kembali</button>}<button onClick={onLogout} className="text-xs text-muted-foreground">Logout</button></div></div>
-        <h1 className="text-2xl font-bold mb-1">Buat Strategi Baru</h1>
+
+        {/* Brand list */}
+        {brands.length > 0 && <div className="mb-6">
+          <p className="text-xs font-semibold uppercase text-muted-foreground mb-2">Brand Kamu ({brands.length}/{maxBrands})</p>
+          <div className="space-y-2">
+            {brands.map(b => (
+              <button key={b.id} onClick={() => switchBrand(b.id)} className="w-full flex items-center gap-3 rounded-xl bg-white p-3 shadow-sm text-left hover:shadow-md transition">
+                <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">{b.niche[0]?.toUpperCase()}</div>
+                <div className="flex-1 min-w-0"><p className="text-sm font-medium truncate">{b.niche}</p><p className="text-[10px] text-muted-foreground">{b.platform}</p></div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              </button>
+            ))}
+          </div>
+          {brands.length >= maxBrands && userPlan !== "business" && <button onClick={onShowPricing} className="w-full mt-2 text-xs text-primary text-center py-2">Upgrade untuk tambah brand →</button>}
+        </div>}
+
+        <h1 className="text-2xl font-bold mb-1">{brands.length > 0 ? "+ Brand Baru" : "Buat Strategi Baru"}</h1>
         <p className="text-sm text-muted-foreground mb-6">Isi profil akun medsos kamu.</p>
         <div className="grid gap-4">
           <div className="grid gap-1.5"><Label className="text-sm">Niche / Topik</Label><Input value={form.niche} onChange={e => update("niche", e.target.value)} placeholder="Coaching produktivitas" /></div>
