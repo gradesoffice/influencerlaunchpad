@@ -35,7 +35,7 @@ export default function LoginPage() {
       {/* Hero */}
       <section className="mx-auto max-w-6xl px-6 py-16 md:py-24 grid md:grid-cols-2 gap-12 items-center">
         <div>
-          <h1 className="text-4xl md:text-5xl font-bold leading-tight">Bangun Brand.<br/>Jangkau Audiens.<br/><span className="text-primary">Dapatkan Hasil.</span></h1>
+          <h1 className="text-4xl md:text-5xl font-bold leading-tight">Bangun Kontenmu<br/>Dengan Strategi.<br/><span className="text-primary">Ciptakan Algoritma FYP-mu Sendiri.</span></h1>
           <p className="mt-5 text-muted-foreground text-lg">Platform all-in-one untuk influencer & brand membuat strategi, mengelola konten, dan mengukur performa dalam satu tempat.</p>
           <div className="mt-8 flex flex-wrap gap-4">
             <Button size="lg" className="h-12 px-6 text-primary-foreground gap-2" style={{ background: "var(--gradient-hero)" }} onClick={onGoogle}>{loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <>Mulai Gratis Sekarang <ArrowRight className="h-4 w-4" /></>}</Button>
@@ -79,11 +79,11 @@ export default function LoginPage() {
             <span>tokopedia</span><span>Shopee</span><span>Lazada</span><span>blibli</span><span>traveloka</span>
           </div>
           <div className="grid gap-6 md:grid-cols-5">
-            <FC icon={<Sparkles className="h-6 w-6 text-primary" />} title="Strategi Terstruktur" desc="Roadmap step-by-step untuk capai tujuan brand." />
-            <FC icon={<BarChart3 className="h-6 w-6 text-violet-500" />} title="Analytics Lengkap" desc="Pantau performa konten secara real-time." />
-            <FC icon={<Users className="h-6 w-6 text-emerald-500" />} title="Kenali Audiens" desc="Pahami audiens untuk hasil lebih efektif." />
-            <FC icon={<Gauge className="h-6 w-6 text-rose-500" />} title="KPI Tracker" desc="Ukur keberhasilan dengan KPI yang jelas." />
-            <FC icon={<Lightbulb className="h-6 w-6 text-amber-500" />} title="Insight Cerdas" desc="Rekomendasi AI untuk konten optimal." />
+            <FC icon={<Sparkles className="h-6 w-6 text-primary" />} title="Strategi Terstruktur" desc="Roadmap step-by-step dengan fase & milestone. AI generate konten harian siap posting." />
+            <FC icon={<BarChart3 className="h-6 w-6 text-violet-500" />} title="Analytics Lengkap" desc="Pantau reach, engagement, konversi per platform. Lihat tren naik-turun real-time." />
+            <FC icon={<Users className="h-6 w-6 text-emerald-500" />} title="Kenali Audiens" desc="Pahami siapa yang engage. Rekomendasi jam posting & format terbaik." />
+            <FC icon={<Gauge className="h-6 w-6 text-rose-500" />} title="KPI Tracker" desc="Target likes, DM, konversi per minggu. Progress bar visual yang memotivasi." />
+            <FC icon={<Lightbulb className="h-6 w-6 text-amber-500" />} title="Insight Cerdas AI" desc="AI analisis data-mu: format terbaik, waktu posting optimal, do's & don'ts otomatis." />
           </div>
         </div>
       </section>
@@ -102,8 +102,8 @@ export default function LoginPage() {
               </div>
             </div>
             <div id="testimoni" className="grid gap-4">
-              <Card className="p-5"><p className="text-sm italic text-muted-foreground mb-3">"Influencer Launchpad bantu aku lebih terstruktur dan ngerti performa kontenku."</p><div className="flex items-center gap-3"><div className="h-8 w-8 rounded-full bg-muted" /><div><p className="text-sm font-medium">Nadia Rahma</p><p className="text-xs text-muted-foreground">Content Creator</p></div></div></Card>
-              <Card className="p-5"><p className="text-sm italic text-muted-foreground mb-3">"Tim kami jadi lebih efisien dan hasil kampanye meningkat signifikan."</p><div className="flex items-center gap-3"><div className="h-8 w-8 rounded-full bg-muted" /><div><p className="text-sm font-medium">Dimas Pratama</p><p className="text-xs text-muted-foreground">Digital Marketing</p></div></div></Card>
+              <Card className="p-5"><p className="text-sm italic text-muted-foreground mb-3">"Influencer Launchpad bantu aku merapikan konten, konten lebih terstruktur. Dalam 1 bulan, engagement Reels-ku naik 25% karena ikutan saran AI-nya!"</p><div className="flex items-center gap-3"><div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold text-primary">N</div><div><p className="text-sm font-medium">Nadia Rahma</p><p className="text-xs text-muted-foreground">Content Creator · ⭐⭐⭐⭐⭐</p></div></div></Card>
+              <Card className="p-5"><p className="text-sm italic text-muted-foreground mb-3">"Tim kami handle 4 brand sekaligus pakai Business plan. Semua roadmap & analytics terpisah per brand. Game changer!"</p><div className="flex items-center gap-3"><div className="h-8 w-8 rounded-full bg-violet-100 flex items-center justify-center text-xs font-bold text-violet-600">D</div><div><p className="text-sm font-medium">Dimas Pratama</p><p className="text-xs text-muted-foreground">Digital Marketing Agency · ⭐⭐⭐⭐⭐</p></div></div></Card>
             </div>
           </div>
         </div>
