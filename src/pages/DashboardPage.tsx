@@ -296,7 +296,7 @@ export default function DashboardPage() {
           <button onClick={() => userPlan !== "free" ? setActiveNav("insight") : setShowPricing(true)} className={`p-2 rounded-xl transition ${activeNav === "insight" ? "text-primary bg-primary/10" : "text-muted-foreground"}`}><Lightbulb className="h-5 w-5" /></button>
         </div>
       </div>
-      <div className="md:hidden h-14" />
+      <div className="md:hidden h-20" />
 
       {/* Pricing Modal */}
       {showPricing && <PricingModal onClose={() => setShowPricing(false)} onUpgrade={() => { setShowPricing(false); navigate("/pricing"); }} />}
@@ -377,8 +377,15 @@ function FormView({ form, update, loading, onGenerate, onLogout, onBack, userPla
   const maxBrands = userPlan === "business" ? 5 : userPlan === "pro" ? 1 : 1;
 
   const switchBrand = (id: string) => {
-    // Reload page with this strategy
     window.location.href = "/";
+  };
+
+  const deleteBrand = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!confirm("Hapus brand ini? Semua data akan hilang.")) return;
+    await supabase.from("strategies").delete().eq("id", id);
+    setBrands(b => b.filter(x => x.id !== id));
+    toast.success("Brand dihapus");
   };
 
   return (
@@ -392,11 +399,14 @@ function FormView({ form, update, loading, onGenerate, onLogout, onBack, userPla
           <p className="text-xs font-semibold uppercase text-muted-foreground mb-2">Brand Kamu ({brands.length}/{maxBrands})</p>
           <div className="space-y-2">
             {brands.map(b => (
-              <button key={b.id} onClick={() => switchBrand(b.id)} className="w-full flex items-center gap-3 rounded-xl bg-white p-3 shadow-sm text-left hover:shadow-md transition">
-                <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">{b.niche[0]?.toUpperCase()}</div>
-                <div className="flex-1 min-w-0"><p className="text-sm font-medium truncate">{b.niche}</p><p className="text-[10px] text-muted-foreground">{b.platform}</p></div>
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
-              </button>
+              <div key={b.id} className="flex items-center gap-2">
+                <button onClick={() => switchBrand(b.id)} className="flex-1 flex items-center gap-3 rounded-xl bg-white p-3 shadow-sm text-left hover:shadow-md transition">
+                  <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">{b.niche[0]?.toUpperCase()}</div>
+                  <div className="flex-1 min-w-0"><p className="text-sm font-medium truncate">{b.niche}</p><p className="text-[10px] text-muted-foreground">{b.platform}</p></div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                </button>
+                <button onClick={(e) => deleteBrand(b.id, e)} className="h-8 w-8 rounded-lg flex items-center justify-center text-muted-foreground/50 hover:text-rose-500 hover:bg-rose-50 transition" title="Hapus">🗑️</button>
+              </div>
             ))}
           </div>
           {brands.length >= maxBrands && userPlan !== "business" && <button onClick={onShowPricing} className="w-full mt-2 text-xs text-primary text-center py-2">Upgrade untuk tambah brand →</button>}
