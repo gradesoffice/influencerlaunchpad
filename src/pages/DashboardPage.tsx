@@ -37,6 +37,7 @@ export default function DashboardPage() {
   const [activeNav, setActiveNav] = useState("home");
   const [userPlan, setUserPlan] = useState<"free" | "pro" | "business">("free");
   const [userName, setUserName] = useState("");
+  const [trialDaysLeft, setTrialDaysLeft] = useState(7);
 
   useEffect(() => { loadFromDb(); }, []);
   const loadFromDb = async () => {
@@ -51,9 +52,16 @@ export default function DashboardPage() {
         if (savedFb?.length) { const m: Record<string, Feedback> = {}; savedFb.forEach(f => m[`${f.week_number}|${f.day}|${f.slot}|${f.platform || "instagram"}`] = { ...f, platform: f.platform || "instagram" }); setFeedback(m); }
       } else { /* no strategy — will show empty state in dashboard */ }
       // Load user plan
-      const { data: planRow } = await supabase.from("user_plans").select("plan, expires_at").limit(1).single();
+      const { data: planRow } = await supabase.from("user_plans").select("plan, expires_at, created_at").limit(1).single();
       if (planRow && (!planRow.expires_at || new Date(planRow.expires_at) > new Date())) {
         setUserPlan(planRow.plan as any);
+      }
+      // Calculate trial days remaining
+      if (planRow?.plan === "free" && planRow.created_at) {
+        const created = new Date(planRow.created_at);
+        const now = new Date();
+        const daysUsed = Math.floor((now.getTime() - created.getTime()) / 86400000);
+        setTrialDaysLeft(Math.max(0, 7 - daysUsed));
       }
       // Load user name
       const { data: { user } } = await supabase.auth.getUser();
@@ -195,7 +203,11 @@ export default function DashboardPage() {
           {strategy && <>
 
           {/* Plan warning - subtle */}
-          {userPlan === "free" && activeNav === "home" && <button onClick={() => setShowPricing(true)} className="w-full text-left rounded-2xl bg-rose-50/80 px-4 py-3 flex items-center gap-3"><span className="text-sm">⚡</span><p className="text-xs text-rose-600 flex-1">Upgrade untuk akses penuh</p><ChevronRight className="h-4 w-4 text-rose-400" /></button>}
+          {userPlan === "free" && activeNav === "home" && <button onClick={() => setShowPricing(true)} className="w-full text-left rounded-2xl bg-rose-50/80 px-4 py-3 flex items-center gap-3">
+            <span className="text-sm">⏳</span>
+            <div className="flex-1"><p className="text-xs text-rose-600 font-medium">Sisa {trialDaysLeft} hari trial</p><p className="text-[10px] text-rose-500/70">Upgrade sebelum habis →</p></div>
+            <ChevronRight className="h-4 w-4 text-rose-400" />
+          </button>}
 
           {/* HOME VIEW */}
           {activeNav === "home" && <>
