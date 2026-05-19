@@ -386,6 +386,8 @@ function FormView({ form, update, loading, onGenerate, onLogout, onBack, userPla
     await supabase.from("strategies").delete().eq("id", id);
     setBrands(b => b.filter(x => x.id !== id));
     toast.success("Brand dihapus");
+    // If no brands left, reload to show form
+    if (brands.length <= 1) window.location.reload();
   };
 
   return (
