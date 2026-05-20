@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Checkout — Influencer Launchpad</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #faf9f7; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+    .container { max-width: 420px; width: 100%; }
+    .card { background: white; border-radius: 20px; padding: 32px; box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
+    .logo { text-align: center; margin-bottom: 24px; }
+    .logo span { font-size: 24px; }
+    .logo h2 { font-size: 18px; font-weight: 700; margin-top: 8px; }
+    .logo p { font-size: 13px; color: #888; margin-top: 4px; }
+    .plans { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px; }
+    .plan { border: 2px solid #e5e5e5; border-radius: 14px; padding: 16px; text-align: center; cursor: pointer; transition: all 0.2s; }
+    .plan.active { border-color: #e11d48; background: #fff1f2; }
+    .plan h3 { font-size: 14px; font-weight: 700; }
+    .plan .price { font-size: 22px; font-weight: 800; margin: 6px 0; }
+    .plan .period { font-size: 11px; color: #888; }
+    .plan .badge { display: inline-block; background: #e11d48; color: white; font-size: 9px; padding: 2px 8px; border-radius: 20px; margin-bottom: 6px; }
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: #333; }
+    .form-group input { width: 100%; height: 44px; border: 1.5px solid #e5e5e5; border-radius: 12px; padding: 0 14px; font-size: 14px; outline: none; transition: border 0.2s; }
+    .form-group input:focus { border-color: #e11d48; }
+    .btn { width: 100%; height: 48px; background: linear-gradient(135deg, #e11d48, #be123c); color: white; border: none; border-radius: 14px; font-size: 15px; font-weight: 700; cursor: pointer; transition: transform 0.1s; }
+    .btn:active { transform: scale(0.98); }
+    .features { margin-top: 20px; padding-top: 20px; border-top: 1px solid #f0f0f0; }
+    .features li { list-style: none; font-size: 12px; color: #555; padding: 4px 0; display: flex; align-items: center; gap: 8px; }
+    .features li::before { content: "✓"; color: #10b981; font-weight: bold; }
+    .trust { text-align: center; margin-top: 16px; font-size: 11px; color: #aaa; }
+    .timer { text-align: center; background: #fff7ed; border: 1px solid #fed7aa; border-radius: 10px; padding: 10px; margin-bottom: 20px; }
+    .timer p { font-size: 12px; color: #c2410c; font-weight: 600; }
+    .timer span { font-size: 18px; font-weight: 800; color: #ea580c; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <div class="logo">
+        <span>🚀</span>
+        <h2>Influencer Launchpad</h2>
+        <p>Strategi konten AI untuk dominasi FYP</p>
+      </div>
+
+      <div class="timer">
+        <p>⏳ Penawaran berakhir dalam</p>
+        <span id="countdown">23:59:59</span>
+      </div>
+
+      <div class="plans">
+        <div class="plan active" onclick="selectPlan('pro')">
+          <div class="badge">POPULER</div>
+          <h3>Pro</h3>
+          <div class="price">99rb</div>
+          <div class="period">/bulan</div>
+        </div>
+        <div class="plan" onclick="selectPlan('business')">
+          <h3>Business</h3>
+          <div class="price">249rb</div>
+          <div class="period">/bulan</div>
+        </div>
+      </div>
+
+      <form id="checkoutForm" onsubmit="handleSubmit(event)">
+        <div class="form-group">
+          <label>Nama Lengkap</label>
+          <input type="text" id="name" placeholder="Nama kamu" required>
+        </div>
+        <div class="form-group">
+          <label>Nomor WhatsApp</label>
+          <input type="tel" id="whatsapp" placeholder="08xxxxxxxxxx" required>
+        </div>
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" id="email" placeholder="email@kamu.com" required>
+        </div>
+        <button type="submit" class="btn">Lanjut ke Pembayaran →</button>
+      </form>
+
+      <ul class="features">
+        <li>Strategi & roadmap AI unlimited</li>
+        <li>Analytics & insight per platform</li>
+        <li>Konten harian siap copy-paste</li>
+        <li>AI belajar dari performa kamu</li>
+        <li>Garansi 7 hari uang kembali</li>
+      </ul>
+
+      <p class="trust">🔒 Data aman & terenkripsi · Batalkan kapan saja</p>
+    </div>
+  </div>
+
+  <script>
+    let selectedPlan = 'pro';
+
+    function selectPlan(plan) {
+      selectedPlan = plan;
+      document.querySelectorAll('.plan').forEach(el => el.classList.remove('active'));
+      event.currentTarget.classList.add('active');
+    }
+
+    function handleSubmit(e) {
+      e.preventDefault();
+      const name = document.getElementById('name').value;
+      const wa = document.getElementById('whatsapp').value;
+      const email = document.getElementById('email').value;
+      const price = selectedPlan === 'pro' ? '99.000' : '249.000';
+
+      // Redirect ke halaman pembayaran / WA
+      const msg = encodeURIComponent(`Halo, saya mau upgrade ke plan ${selectedPlan.toUpperCase()}.\n\nNama: ${name}\nEmail: ${email}\nPlan: ${selectedPlan} (Rp ${price}/bulan)\n\nMohon info pembayaran.`);
+      window.open(`https://wa.me/62XXXXXXXXXXX?text=${msg}`, '_blank');
+      // Ganti 62XXXXXXXXXXX dengan nomor WA kamu
+    }
+
+    // Countdown timer
+    function startCountdown() {
+      const end = new Date();
+      end.setHours(23, 59, 59);
+      setInterval(() => {
+        const now = new Date();
+        const diff = end - now;
+        if (diff <= 0) return;
+        const h = String(Math.floor(diff / 3600000)).padStart(2, '0');
+        const m = String(Math.floor((diff % 3600000) / 60000)).padStart(2, '0');
+        const s = String(Math.floor((diff % 60000) / 1000)).padStart(2, '0');
+        document.getElementById('countdown').textContent = `${h}:${m}:${s}`;
+      }, 1000);
+    }
+    startCountdown();
+  </script>
+</body>
+</html>
