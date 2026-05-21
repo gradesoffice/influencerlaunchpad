@@ -33,6 +33,26 @@ export default function PricingPage() {
   const [userWA, setUserWA] = useState("");
   const [uploading, setUploading] = useState(false);
   const [uploaded, setUploaded] = useState(false);
+  const [screenshotUrl, setScreenshotUrl] = useState("");
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const ext = file.name.split(".").pop();
+      const path = `payments/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+      const { error } = await supabase.storage.from("payment-proofs").upload(path, file, { upsert: true });
+      if (error) throw error;
+      const { data: { publicUrl } } = supabase.storage.from("payment-proofs").getPublicUrl(path);
+      setScreenshotUrl(publicUrl);
+      setUploaded(true);
+      toast.success("Screenshot berhasil diupload!");
+    } catch (err) {
+      toast.error("Gagal upload. Coba lagi.");
+    }
+    setUploading(false);
+  };
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -51,8 +71,8 @@ export default function PricingPage() {
 
   const handleConfirm = () => {
     if (!userWA || !userName) { toast.error("Isi nama & WhatsApp dulu"); return; }
-    // Open WA to admin with confirmation
-    const msg = encodeURIComponent(`✅ KONFIRMASI PEMBAYARAN\n\nNama: ${userName}\nEmail: ${userEmail}\nWhatsApp: ${userWA}\nPlan: ${plan.name} (${plan.label}${plan.period})\nMetode: ${method?.label} → ${method?.detail}\n\nUser sudah transfer. Mohon diverifikasi & upgrade plan.`);
+    if (!uploaded) { toast.error("Upload screenshot bukti transfer dulu"); return; }
+    const msg = encodeURIComponent(`✅ KONFIRMASI PEMBAYARAN\n\nNama: ${userName}\nEmail: ${userEmail}\nWhatsApp: ${userWA}\nPlan: ${plan.name} (${plan.label}${plan.period})\nMetode: ${method?.label} → ${method?.detail}\n\n📸 Bukti Transfer:\n${screenshotUrl}\n\nMohon diverifikasi & upgrade plan.`);
     window.open(`https://wa.me/${ADMIN_WA}?text=${msg}`, '_blank');
     toast.success("Konfirmasi terkirim! Kami akan verifikasi dalam 1x24 jam.");
     setStep("confirm");
@@ -113,8 +133,17 @@ export default function PricingPage() {
             <p className="text-[10px] text-amber-700 mt-1">a.n. {method?.name} ({method?.label})</p>
           </div>}
 
-          <Button onClick={handleConfirm} disabled={!selectedMethod} className="w-full h-12 text-primary-foreground font-semibold" style={{ background: "var(--gradient-hero)" }}>
-            <Upload className="mr-2 h-4 w-4" /> Sudah Transfer? Konfirmasi via WA
+          {/* Screenshot upload */}
+          <div className="mb-4">
+            <Label className="text-sm font-medium mb-2 block">📸 Upload Bukti Transfer</Label>
+            <label className={`flex items-center justify-center gap-2 rounded-xl border-2 border-dashed p-4 cursor-pointer transition ${uploaded ? "border-emerald-300 bg-emerald-50" : "border-border hover:border-primary"}`}>
+              <input type="file" accept="image/*" onChange={handleUpload} className="hidden" />
+              {uploading ? <Loader2 className="h-5 w-5 animate-spin text-primary" /> : uploaded ? <><Check className="h-5 w-5 text-emerald-600" /><span className="text-xs text-emerald-700 font-medium">Screenshot terupload ✓</span></> : <><Upload className="h-5 w-5 text-muted-foreground" /><span className="text-xs text-muted-foreground">Tap untuk upload screenshot</span></>}
+            </label>
+          </div>
+
+          <Button onClick={handleConfirm} disabled={!selectedMethod || uploading} className="w-full h-12 text-primary-foreground font-semibold" style={{ background: "var(--gradient-hero)" }}>
+            Konfirmasi via WhatsApp →
           </Button>
           <p className="text-center text-[10px] text-muted-foreground mt-3">Klik tombol di atas → otomatis buka WhatsApp admin untuk konfirmasi</p>
         </Card>}
