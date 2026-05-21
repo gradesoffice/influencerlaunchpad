@@ -45,9 +45,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const endDay = startDay + 6;
 
     const { object } = await generateObject({
-      model, output: 'no-schema', temperature: 0.25, maxOutputTokens: Math.min(14000, 3000 + input.postsPerDay * 900),
-      system: 'Kamu adalah content strategist influencer. Jawab HANYA JSON valid tanpa markdown. Bahasa Indonesia.',
-      prompt: `Breakdown konten Minggu ${input.weekNumber} (Hari ${startDay}-${endDay}).\nPhase: ${input.phaseName}\nTema: ${input.weeklyTheme}\nNiche: ${input.niche}\nPlatform: ${input.platform}\nAudiens: ${input.audience}\nPesan: ${input.message}\nKonversi: ${input.conversionGoal}\nBrand: ${input.brandSummary}\n${input.feedbackInsights ? `Insights: ${input.feedbackInsights}` : ''}\n\n7 hari, ${input.postsPerDay} konten/hari. JSON: {"weekNumber":${input.weekNumber},"theme":"","focus":"","days":[{"day":${startDay},"dayLabel":"","dailyGoal":"","posts":[{"slot":"","format":"","hook":"","caption":"","cta":"","hashtags":[""],"visualIdea":"","conversionTie":""}]}]}`,
+      model, output: 'no-schema', temperature: 0.25, maxOutputTokens: Math.min(8000, 2000 + input.postsPerDay * 600),
+      system: 'Kamu content strategist. Jawab HANYA JSON valid. Bahasa Indonesia. PENTING: hook MAKSIMAL 15 kata, caption MAKSIMAL 30 kata, CTA MAKSIMAL 10 kata. Fokus solve pain point audiens. Singkat, padat, memancing emosi.',
+      prompt: `Minggu ${input.weekNumber} (Hari ${startDay}-${endDay}). Phase: ${input.phaseName}. Tema: ${input.weeklyTheme}. Niche: ${input.niche}. Platform: ${input.platform}. Audiens: ${input.audience}. Pesan: ${input.message}. Konversi: ${input.conversionGoal}. Brand: ${input.brandSummary}. ${input.feedbackInsights ? `Insights: ${input.feedbackInsights}` : ''}\n\n7 hari, ${input.postsPerDay} konten/hari. Hook singkat (max 15 kata), caption padat (max 30 kata), CTA jelas (max 10 kata). JSON: {"weekNumber":${input.weekNumber},"theme":"","focus":"","days":[{"day":${startDay},"dayLabel":"","dailyGoal":"","posts":[{"slot":"","format":"","hook":"","caption":"","cta":"","hashtags":[""],"visualIdea":"","conversionTie":""}]}]}`,
     });
 
     const result = object;

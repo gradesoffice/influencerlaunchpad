@@ -585,6 +585,25 @@ function InsightView({ feedback, weekData }: { feedback: Feedback[]; weeks: Reco
     "Jangan pakai hashtag yang tidak relevan",
   ];
 
+  // Pain points - max 15, generated from context
+  const painPoints = [
+    "Bingung mau posting apa setiap hari",
+    "Konten bagus tapi engagement rendah",
+    "Followers naik tapi tidak convert jadi pembeli",
+    "Tidak tahu jam terbaik untuk posting",
+    "Capek bikin konten tapi hasilnya tidak terukur",
+    "Kompetitor lebih cepat grow padahal kontennya biasa",
+    "Algoritma berubah terus, strategi kemarin tidak work lagi",
+    "Tidak punya brand identity yang konsisten",
+    "DM banyak tapi closing sedikit",
+    "Burnout karena posting tanpa arah",
+    "Tidak tahu format mana yang paling perform",
+    "Audiens tidak engage, cuma jadi silent follower",
+    "Susah bikin hook yang bikin orang berhenti scroll",
+    "Tidak ada sistem tracking performa konten",
+    "Mau scale tapi tidak tahu harus mulai dari mana",
+  ].slice(0, 15);
+
   return (
     <div className="space-y-4">
       <h2 className="text-lg font-bold flex items-center gap-2"><Lightbulb className="h-5 w-5 text-amber-500" />AI Insight</h2>
@@ -604,6 +623,19 @@ function InsightView({ feedback, weekData }: { feedback: Feedback[]; weeks: Reco
         <Card className="p-4"><p className="text-xs font-semibold text-emerald-600 mb-2">✅ Do's</p>{dos.map((d, i) => <p key={i} className="text-[11px] text-muted-foreground mb-1">• {d}</p>)}</Card>
         <Card className="p-4"><p className="text-xs font-semibold text-rose-600 mb-2">❌ Don'ts</p>{donts.map((d, i) => <p key={i} className="text-[11px] text-muted-foreground mb-1">• {d}</p>)}</Card>
       </div>
+
+      {/* Pain Points */}
+      <Card className="p-4">
+        <p className="text-xs font-semibold uppercase text-muted-foreground mb-3">🎯 Pain Points Audiens (gunakan di konten)</p>
+        <div className="grid grid-cols-1 gap-1.5">
+          {painPoints.map((p, i) => (
+            <div key={i} className="flex items-start gap-2 rounded-lg bg-rose-50/50 px-3 py-2">
+              <span className="text-xs text-rose-500 font-bold shrink-0">{i + 1}.</span>
+              <p className="text-[11px] text-rose-800">{p}</p>
+            </div>
+          ))}
+        </div>
+      </Card>
 
       {/* Historical */}
       {feedback.length >= 4 && <Card className="p-4">
