@@ -42,9 +42,9 @@ export default function PricingPage() {
     try {
       const ext = file.name.split(".").pop();
       const path = `payments/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
-      const { error } = await supabase.storage.from("payment-proofs").upload(path, file, { upsert: true });
+      const { error } = await supabase.storage.from("ss user").upload(path, file, { upsert: true });
       if (error) throw error;
-      const { data: { publicUrl } } = supabase.storage.from("payment-proofs").getPublicUrl(path);
+      const { data: { publicUrl } } = supabase.storage.from("ss user").getPublicUrl(path);
       setScreenshotUrl(publicUrl);
       setUploaded(true);
       toast.success("Screenshot berhasil diupload!");
