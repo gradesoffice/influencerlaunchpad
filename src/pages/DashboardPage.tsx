@@ -118,7 +118,7 @@ export default function DashboardPage() {
       const brandSummary = `Persona: ${strategy.brand.persona}\nVoice: ${strategy.brand.voice}\nTagline: ${strategy.brand.tagline}\nPillars: ${strategy.brand.contentPillars.map(p => p.name).join(", ")}`;
       const headers = await getAuthHeaders();
       const feedbackInsights = buildFeedbackInsights();
-      const res = await fetch("/api/week", { method: "POST", headers, body: JSON.stringify({ weekNumber, postsPerDay: form.postsPerDay, niche: form.niche, platform: form.platform, audience: form.audience, message: form.message, conversionGoal: form.conversionGoal, brandSummary, phaseName, weeklyTheme, strategyId, feedbackInsights }) });
+      const res = await fetch("/api/week", { method: "POST", headers, body: JSON.stringify({ weekNumber, postsPerDay: form.postsPerDay, niche: form.niche, platform: form.platform, audience: form.audience, message: form.message, conversionGoal: form.conversionGoal, brandSummary, phaseName, weeklyTheme, strategyId, feedbackInsights, painPoints: (strategy.brand as any).painPoints?.join(", ") || "" }) });
       if (!res.ok) { const e = await res.json().catch(() => null); if (e?.code) { setShowPricing(true); } else throw new Error("Gagal"); return; }
       const data = await res.json(); setWeeks(w => ({ ...w, [weekNumber]: data })); setOpenWeek(weekNumber);
     } catch (e) { toast.error(e instanceof Error ? e.message : "Gagal"); } finally { setLoadingWeek(null); }
@@ -321,7 +321,7 @@ export default function DashboardPage() {
           {activeNav === "kpi" && <KPIView feedback={fbVals} totalWeeks={completedWeeks} />}
 
           {/* Insight View (Pro) */}
-          {activeNav === "insight" && <InsightView feedback={fbVals} weeks={weeks} weekData={Object.values(weeks)} niche={form.niche} platform={form.platform} />}
+          {activeNav === "insight" && <InsightView feedback={fbVals} weeks={weeks} weekData={Object.values(weeks)} niche={form.niche} platform={form.platform} brandPainPoints={(strategy?.brand as any)?.painPoints || []} />}
 
           {/* Analitik View (Pro) */}
           {activeNav === "analitik" && <AnalitikInline strategyId={strategyId} />}
@@ -554,7 +554,7 @@ function KPIBar({ label, current, target }: { label: string; current: number; ta
   return <div><div className="flex justify-between text-xs mb-1"><span>{label}</span><span className="text-muted-foreground">{current}/{target}</span></div><div className="h-2 rounded-full bg-muted overflow-hidden"><div className="h-full rounded-full bg-primary transition-all" style={{ width: `${pct}%` }} /></div></div>;
 }
 
-function InsightView({ feedback, weekData, niche, platform }: { feedback: Feedback[]; weeks: Record<number, WeekPlan>; weekData: WeekPlan[]; niche: string; platform: string }) {
+function InsightView({ feedback, weekData, niche, platform, brandPainPoints }: { feedback: Feedback[]; weeks: Record<number, WeekPlan>; weekData: WeekPlan[]; niche: string; platform: string; brandPainPoints: string[] }) {
   const [trends, setTrends] = useState<any>(null);
   const [loadingTrends, setLoadingTrends] = useState(false);
   const [doctorResult, setDoctorResult] = useState<any>(null);
@@ -659,23 +659,10 @@ function InsightView({ feedback, weekData, niche, platform }: { feedback: Feedba
   ];
 
   // Pain points - max 15, generated from context
-  const painPoints = [
-    "Bingung mau posting apa setiap hari",
-    "Konten bagus tapi engagement rendah",
-    "Followers naik tapi tidak convert jadi pembeli",
-    "Tidak tahu jam terbaik untuk posting",
-    "Capek bikin konten tapi hasilnya tidak terukur",
-    "Kompetitor lebih cepat grow padahal kontennya biasa",
-    "Algoritma berubah terus, strategi kemarin tidak work lagi",
-    "Tidak punya brand identity yang konsisten",
-    "DM banyak tapi closing sedikit",
-    "Burnout karena posting tanpa arah",
-    "Tidak tahu format mana yang paling perform",
-    "Audiens tidak engage, cuma jadi silent follower",
-    "Susah bikin hook yang bikin orang berhenti scroll",
-    "Tidak ada sistem tracking performa konten",
-    "Mau scale tapi tidak tahu harus mulai dari mana",
-  ].slice(0, 15);
+  // Pain points - from brand strategy (AI-generated) or fallback
+  const painPoints = brandPainPoints.length > 0 ? brandPainPoints.slice(0, 15) : [
+    "Belum ada pain points. Generate strategi baru untuk mendapatkan pain points spesifik audiens-mu."
+  ];
 
   return (
     <div className="space-y-4">
@@ -784,16 +771,18 @@ function InsightView({ feedback, weekData, niche, platform }: { feedback: Feedba
       </div>
 
       {/* Pain Points */}
-      <Card className="p-4">
-        <p className="text-xs font-semibold uppercase text-muted-foreground mb-3">🎯 Pain Points Audiens (gunakan di konten)</p>
+      <Card className="p-4 border-border/40">
+        <div className="flex items-center gap-2 mb-3"><Target className="h-4 w-4 text-rose-500" /><p className="text-xs font-semibold">Pain Points Audiens</p></div>
+        <p className="text-[10px] text-muted-foreground mb-3">AI generate berdasarkan niche & audiens brand-mu. Dipakai sebagai dasar hook & caption konten harian.</p>
         <div className="grid grid-cols-1 gap-1.5">
           {painPoints.map((p, i) => (
-            <div key={i} className="flex items-start gap-2 rounded-lg bg-rose-50/50 px-3 py-2">
-              <span className="text-xs text-rose-500 font-bold shrink-0">{i + 1}.</span>
-              <p className="text-[11px] text-rose-800">{p}</p>
+            <div key={i} className="flex items-start gap-2 rounded-lg bg-rose-50/30 px-3 py-2">
+              <span className="text-[10px] text-rose-400 font-semibold shrink-0 w-5">{brandPainPoints.length > 0 ? `${i + 1}.` : ""}</span>
+              <p className="text-[11px] text-foreground/80">{p}</p>
             </div>
           ))}
         </div>
+        {brandPainPoints.length > 0 && <p className="text-[9px] text-muted-foreground italic mt-2">Generate strategi baru untuk update pain points.</p>}
       </Card>
 
       {/* Historical */}

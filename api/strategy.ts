@@ -46,7 +46,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const { object } = await generateObject({
       model, output: 'no-schema', temperature: 0.3, maxOutputTokens: 6000,
       system: 'Kamu adalah ahli strategi influencer & personal branding. Jawab HANYA JSON valid tanpa markdown. Bahasa Indonesia natural dan praktis.',
-      prompt: `Buat strategi 90 hari menuju influencer.\nNiche: ${input.niche}\nPlatform: ${input.platform}\nAudiens: ${input.audience}\nPesan: ${input.message}\nKonversi: ${input.conversionGoal}\nTone: ${input.tone || 'tentukan'}\nKonten/hari: ${input.postsPerDay}\n\nBuat brand identity + 3 phase. JSON: {"brand":{"persona":"","voice":"","visualStyle":"","tagline":"","contentPillars":[{"name":"","description":""}],"hashtags":[""],"dosAndDonts":{"dos":[""],"donts":[""]}},"phases":[{"name":"","days":"","objective":"","kpis":[""],"weeklyThemes":[""]}]}`,
+      prompt: `Buat strategi 90 hari menuju influencer.\nNiche: ${input.niche}\nPlatform: ${input.platform}\nAudiens: ${input.audience}\nPesan: ${input.message}\nKonversi: ${input.conversionGoal}\nTone: ${input.tone || 'tentukan'}\nKonten/hari: ${input.postsPerDay}\n\nBuat brand identity + 3 phase + 10-15 pain points SPESIFIK audiens target (bukan pain points content creator, tapi pain points AUDIENS yang akan dijadikan bahan konten). JSON: {"brand":{"persona":"","voice":"","visualStyle":"","tagline":"","contentPillars":[{"name":"","description":""}],"hashtags":[""],"dosAndDonts":{"dos":[""],"donts":[""]},"painPoints":[""]},"phases":[{"name":"","days":"","objective":"","kpis":[""],"weeklyThemes":[""]}]}`,
     });
 
     const result = object as Record<string, unknown>;
