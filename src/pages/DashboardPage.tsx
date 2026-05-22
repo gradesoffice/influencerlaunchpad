@@ -85,6 +85,12 @@ export default function DashboardPage() {
     return false;
   };
 
+  // Helper for locked Pro features - tracks clicks toward paywall
+  const tryProFeature = (navKey: string) => {
+    if (userPlan !== "free") { setActiveNav(navKey); return; }
+    checkPaywall();
+  };
+
   const buildFeedbackInsights = (): string => {
     const entries = Object.entries(feedback).filter(([, v]) => v.likes + v.comments + v.messages + v.conversions > 0);
     if (!entries.length) return "";
@@ -178,10 +184,10 @@ export default function DashboardPage() {
           <SideIcon icon={<Home className="h-5 w-5" />} active={activeNav === "home"} onClick={() => setActiveNav("home")} tooltip="Overview" />
           <SideIcon icon={<Map className="h-5 w-5" />} active={activeNav === "roadmap"} onClick={() => setActiveNav("roadmap")} tooltip="Roadmap" />
           <SideIcon icon={<FileText className="h-5 w-5" />} active={activeNav === "konten"} onClick={() => setActiveNav("konten")} tooltip="Konten" />
-          <SideIcon icon={<BarChart3 className="h-5 w-5" />} active={activeNav === "analitik"} onClick={() => userPlan !== "free" ? setActiveNav("analitik") : setShowPricing(true)} tooltip="Analitik" locked={userPlan === "free"} />
-          <SideIcon icon={<Users className="h-5 w-5" />} active={activeNav === "audiens"} onClick={() => userPlan !== "free" ? setActiveNav("audiens") : setShowPricing(true)} tooltip="Audiens" locked={userPlan === "free"} />
-          <SideIcon icon={<Gauge className="h-5 w-5" />} active={activeNav === "kpi"} onClick={() => userPlan !== "free" ? setActiveNav("kpi") : setShowPricing(true)} tooltip="KPI" locked={userPlan === "free"} />
-          <SideIcon icon={<Lightbulb className="h-5 w-5" />} active={activeNav === "insight"} onClick={() => userPlan !== "free" ? setActiveNav("insight") : setShowPricing(true)} tooltip="Insight" locked={userPlan === "free"} />
+          <SideIcon icon={<BarChart3 className="h-5 w-5" />} active={activeNav === "analitik"} onClick={() => tryProFeature("analitik")} tooltip="Analitik" locked={userPlan === "free"} />
+          <SideIcon icon={<Users className="h-5 w-5" />} active={activeNav === "audiens"} onClick={() => tryProFeature("audiens")} tooltip="Audiens" locked={userPlan === "free"} />
+          <SideIcon icon={<Gauge className="h-5 w-5" />} active={activeNav === "kpi"} onClick={() => tryProFeature("kpi")} tooltip="KPI" locked={userPlan === "free"} />
+          <SideIcon icon={<Lightbulb className="h-5 w-5" />} active={activeNav === "insight"} onClick={() => tryProFeature("insight")} tooltip="Insight" locked={userPlan === "free"} />
         </nav>
         <div className="space-y-3 mt-4 pt-4 border-t border-border">
           <SideIcon icon={<Crown className="h-5 w-5 text-amber-500" />} active={false} onClick={() => setShowPricing(true)} tooltip="Upgrade" />
@@ -239,7 +245,7 @@ export default function DashboardPage() {
             </div>
 
             {/* Mini analytics preview (locked for free) */}
-            <div className={`rounded-2xl bg-white p-4 shadow-sm ${userPlan === "free" ? "opacity-50" : ""}`} onClick={() => userPlan === "free" ? setShowPricing(true) : setActiveNav("analitik")}>
+            <div className={`rounded-2xl bg-white p-4 shadow-sm cursor-pointer ${userPlan === "free" ? "opacity-50" : ""}`} onClick={() => userPlan === "free" ? checkPaywall() : setActiveNav("analitik")}>
               <div className="flex items-center justify-between mb-3">
                 <p className="text-xs font-semibold">📊 Performa</p>
                 {userPlan === "free" && <Badge variant="outline" className="text-[9px]">🔒 Pro</Badge>}
@@ -333,9 +339,9 @@ export default function DashboardPage() {
         <div className="flex items-center justify-around">
           <button onClick={() => setActiveNav("home")} className={`p-2 rounded-xl transition ${activeNav === "home" || activeNav === "konten" ? "text-primary bg-primary/10" : "text-muted-foreground"}`}><Home className="h-5 w-5" /></button>
           <button onClick={() => setActiveNav("roadmap")} className={`p-2 rounded-xl transition ${activeNav === "roadmap" ? "text-primary bg-primary/10" : "text-muted-foreground"}`}><Map className="h-5 w-5" /></button>
-          <button onClick={() => userPlan !== "free" ? setActiveNav("audiens") : setShowPricing(true)} className={`p-2 rounded-xl transition ${activeNav === "audiens" ? "text-primary bg-primary/10" : "text-muted-foreground"}`}><Users className="h-5 w-5" /></button>
-          <button onClick={() => userPlan !== "free" ? setActiveNav("analitik") : setShowPricing(true)} className={`p-2 rounded-xl transition ${activeNav === "analitik" || activeNav === "kpi" ? "text-primary bg-primary/10" : "text-muted-foreground"}`}><BarChart3 className="h-5 w-5" /></button>
-          <button onClick={() => userPlan !== "free" ? setActiveNav("insight") : setShowPricing(true)} className={`p-2 rounded-xl transition ${activeNav === "insight" ? "text-primary bg-primary/10" : "text-muted-foreground"}`}><Lightbulb className="h-5 w-5" /></button>
+          <button onClick={() => tryProFeature("audiens")} className={`p-2 rounded-xl transition ${activeNav === "audiens" ? "text-primary bg-primary/10" : "text-muted-foreground"}`}><Users className="h-5 w-5" /></button>
+          <button onClick={() => tryProFeature("analitik")} className={`p-2 rounded-xl transition ${activeNav === "analitik" || activeNav === "kpi" ? "text-primary bg-primary/10" : "text-muted-foreground"}`}><BarChart3 className="h-5 w-5" /></button>
+          <button onClick={() => tryProFeature("insight")} className={`p-2 rounded-xl transition ${activeNav === "insight" ? "text-primary bg-primary/10" : "text-muted-foreground"}`}><Lightbulb className="h-5 w-5" /></button>
         </div>
       </div>
       <div className="md:hidden h-20" />
