@@ -201,10 +201,13 @@ export default function DashboardPage() {
         <div className="max-w-4xl mx-auto space-y-6">
           {/* Header - minimal */}
           <div className="flex items-center justify-between">
-            <p className="text-sm font-semibold">{userName || "Hey"} 👋</p>
+            <div className="flex items-center gap-2">
+              <p className="text-sm font-semibold">{userName || "Hey"} 👋</p>
+              <Badge className={`text-[9px] px-2 py-0.5 ${userPlan === "business" ? "bg-violet-600 text-white" : userPlan === "pro" ? "bg-primary text-white" : "bg-muted text-muted-foreground"}`}>{userPlan === "business" ? "👑 Business" : userPlan === "pro" ? "⚡ Pro" : "Free"}</Badge>
+            </div>
             <div className="flex items-center gap-3">
               <button onClick={() => setShowForm(true)} title="Edit"><Settings className="h-5 w-5 text-muted-foreground/60 hover:text-primary transition" /></button>
-              <button onClick={() => setShowPricing(true)} title="Upgrade"><Crown className="h-5 w-5 text-amber-400" /></button>
+              {userPlan === "free" && <button onClick={() => setShowPricing(true)} title="Upgrade"><Crown className="h-5 w-5 text-amber-400" /></button>}
             </div>
           </div>
 
@@ -323,7 +326,7 @@ export default function DashboardPage() {
           {activeNav === "kpi" && <KPIView feedback={fbVals} totalWeeks={completedWeeks} />}
 
           {/* Insight View (Pro) */}
-          {activeNav === "insight" && <InsightView feedback={fbVals} weeks={weeks} weekData={Object.values(weeks)} />}
+          {activeNav === "insight" && <InsightView feedback={fbVals} weeks={weeks} weekData={Object.values(weeks)} niche={form.niche} platform={form.platform} />}
 
           {/* Analitik View (Pro) */}
           {activeNav === "analitik" && <AnalitikInline strategyId={strategyId} />}
@@ -556,7 +559,37 @@ function KPIBar({ label, current, target }: { label: string; current: number; ta
   return <div><div className="flex justify-between text-xs mb-1"><span>{label}</span><span className="text-muted-foreground">{current}/{target}</span></div><div className="h-2 rounded-full bg-muted overflow-hidden"><div className="h-full rounded-full bg-primary transition-all" style={{ width: `${pct}%` }} /></div></div>;
 }
 
-function InsightView({ feedback, weekData }: { feedback: Feedback[]; weeks: Record<number, WeekPlan>; weekData: WeekPlan[] }) {
+function InsightView({ feedback, weekData, niche, platform }: { feedback: Feedback[]; weeks: Record<number, WeekPlan>; weekData: WeekPlan[]; niche: string; platform: string }) {
+  const [trends, setTrends] = useState<any>(null);
+  const [loadingTrends, setLoadingTrends] = useState(false);
+  const [doctorInput, setDoctorInput] = useState("");
+  const [doctorResult, setDoctorResult] = useState<any>(null);
+  const [loadingDoctor, setLoadingDoctor] = useState(false);
+
+  const fetchTrends = async () => {
+    // Check localStorage cache (7 days)
+    const cacheKey = `ila_trends_${niche}_${platform}`;
+    const cached = localStorage.getItem(cacheKey);
+    if (cached) { const { data, ts } = JSON.parse(cached); if (Date.now() - ts < 7 * 86400000) { setTrends(data); return; } }
+    setLoadingTrends(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch("/api/trend-forecast", { method: "POST", headers: { "Content-Type": "application/json", ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}) }, body: JSON.stringify({ niche, platform }) });
+      if (res.ok) { const data = await res.json(); setTrends(data); localStorage.setItem(cacheKey, JSON.stringify({ data, ts: Date.now() })); }
+      else { const e = await res.json().catch(() => null); toast.error(e?.error || "Gagal load trends"); }
+    } catch { toast.error("Gagal"); } finally { setLoadingTrends(false); }
+  };
+
+  const runDoctor = async () => {
+    if (!doctorInput.trim()) { toast.error("Paste caption dulu"); return; }
+    setLoadingDoctor(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch("/api/content-doctor", { method: "POST", headers: { "Content-Type": "application/json", ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}) }, body: JSON.stringify({ caption: doctorInput, platform, niche }) });
+      if (res.ok) { setDoctorResult(await res.json()); }
+      else { const e = await res.json().catch(() => null); toast.error(e?.error || "Gagal"); }
+    } catch { toast.error("Gagal"); } finally { setLoadingDoctor(false); }
+  };
   // Format analysis
   const formatStats: Record<string, { count: number; likes: number; comments: number; messages: number; conversions: number; reach: number }> = {};
   weekData.forEach(w => w.days?.forEach(d => d.posts?.forEach(p => {
@@ -642,6 +675,49 @@ function InsightView({ feedback, weekData }: { feedback: Feedback[]; weeks: Reco
   return (
     <div className="space-y-4">
       <h2 className="text-lg font-bold flex items-center gap-2"><Lightbulb className="h-5 w-5 text-amber-500" />AI Insight</h2>
+
+      {/* AI Trend Forecast */}
+      <Card className="p-4">
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-xs font-semibold">🔮 AI Trend Forecast</p>
+          <Button variant="outline" size="sm" className="h-7 text-[10px]" onClick={fetchTrends} disabled={loadingTrends}>{loadingTrends ? <Loader2 className="h-3 w-3 animate-spin" /> : trends ? "Refresh" : "Generate"}</Button>
+        </div>
+        {trends?.trends ? <div className="space-y-2">
+          {trends.trends.map((t: any, i: number) => (
+            <div key={i} className="rounded-lg bg-violet-50/50 p-2.5">
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-[11px] font-semibold">{t.title}</p>
+                <Badge variant="secondary" className={`text-[8px] ${t.confidence === "high" ? "bg-emerald-100 text-emerald-700" : t.confidence === "medium" ? "bg-amber-100 text-amber-700" : "bg-muted"}`}>{t.confidence}</Badge>
+              </div>
+              <p className="text-[10px] text-muted-foreground">{t.description}</p>
+              {t.hookIdea && <p className="text-[10px] text-primary mt-1">💡 Hook: "{t.hookIdea}"</p>}
+              {t.format && <Badge variant="outline" className="text-[8px] mt-1">{t.format}</Badge>}
+            </div>
+          ))}
+          <p className="text-[9px] text-muted-foreground italic text-center">Cache 7 hari · Niche: {niche}</p>
+        </div> : <p className="text-[11px] text-muted-foreground italic">Klik Generate untuk prediksi trend bulan ini di niche-mu.</p>}
+      </Card>
+
+      {/* AI Content Doctor */}
+      <Card className="p-4">
+        <p className="text-xs font-semibold mb-3">🩺 Content Doctor</p>
+        <p className="text-[10px] text-muted-foreground mb-2">Paste caption yang underperform, AI diagnosa kenapa flop & kasih fix.</p>
+        <Textarea value={doctorInput} onChange={e => setDoctorInput(e.target.value)} placeholder="Paste caption yang performanya jelek di sini..." rows={3} className="text-xs mb-2" />
+        <Button variant="outline" size="sm" className="h-8 text-xs w-full" onClick={runDoctor} disabled={loadingDoctor}>{loadingDoctor ? <Loader2 className="h-3 w-3 animate-spin mr-2" /> : "🔍"} Diagnosa</Button>
+        {doctorResult && <div className="mt-3 space-y-2">
+          <div className="rounded-lg bg-rose-50 p-2.5"><p className="text-[11px] text-rose-800 font-semibold">Diagnosis:</p><p className="text-[10px] text-rose-700">{doctorResult.diagnosis}</p></div>
+          {doctorResult.issues?.length > 0 && <div className="rounded-lg bg-amber-50 p-2.5"><p className="text-[11px] text-amber-800 font-semibold">Issues:</p>{doctorResult.issues.map((iss: string, i: number) => <p key={i} className="text-[10px] text-amber-700">• {iss}</p>)}</div>}
+          {doctorResult.fixes?.length > 0 && <div className="space-y-2">{doctorResult.fixes.map((fix: any, i: number) => (
+            <div key={i} className="rounded-lg bg-emerald-50 p-2.5">
+              <p className="text-[10px] text-emerald-800 font-semibold">Fix #{fix.version}:</p>
+              <p className="text-[10px]">🪝 {fix.hook}</p>
+              <p className="text-[10px] text-muted-foreground">{fix.caption}</p>
+              <p className="text-[10px] text-primary">CTA: {fix.cta}</p>
+              <p className="text-[9px] text-muted-foreground italic mt-1">↳ {fix.why}</p>
+            </div>
+          ))}</div>}
+        </div>}
+      </Card>
 
       {/* Recommendations */}
       <Card className="p-4 space-y-2">
