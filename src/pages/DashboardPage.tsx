@@ -245,7 +245,7 @@ export default function DashboardPage() {
             </div>
 
             {/* Mini analytics preview (locked for free) */}
-            <div className={`rounded-2xl bg-white p-4 shadow-sm cursor-pointer ${userPlan === "free" ? "opacity-50" : ""}`} onClick={() => userPlan === "free" ? checkPaywall() : setActiveNav("analitik")}>
+            <div className={`rounded-2xl bg-white p-4 shadow-sm cursor-pointer ${userPlan === "free" ? "opacity-50" : ""}`} onClick={() => setActiveNav("analitik")}>
               <div className="flex items-center justify-between mb-3">
                 <p className="text-xs font-semibold">📊 Performa</p>
                 {userPlan === "free" && <Badge variant="outline" className="text-[9px]">🔒 Pro</Badge>}
@@ -822,7 +822,7 @@ function AnalitikInline({ strategyId }: { strategyId: string | null }) {
 
   // Totals
   const totals = feedbackData.reduce((a: any, f: any) => ({ posts: a.posts + 1, likes: a.likes + f.likes, comments: a.comments + f.comments, messages: a.messages + f.messages, conversions: a.conversions + f.conversions, reach: a.reach + (f.reach || 0) }), { posts: 0, likes: 0, comments: 0, messages: 0, conversions: 0, reach: 0 });
-  const totalPosts = weekData.reduce((s, w) => s + (w?.days?.reduce((a: number, d: any) => a + (d.posts?.length ?? 0), 0) ?? 0), 0);
+  const totalPosts = weekData.reduce((s, w: any) => s + ((w?.days || []).reduce((a: number, d: any) => a + ((d?.posts || []).length), 0)), 0);
   const totalEng = totals.likes + totals.comments + totals.messages;
   const er = totals.reach > 0 ? ((totalEng / totals.reach) * 100).toFixed(1) : "—";
   const cr = totals.reach > 0 ? ((totals.conversions / totals.reach) * 100).toFixed(2) : "—";
@@ -846,25 +846,31 @@ function AnalitikInline({ strategyId }: { strategyId: string | null }) {
 
   // Attribution top 3
   const postMap = new Map<string, { format: string; hook: string }>();
-  weekData.forEach((w: any, wi) => w?.days?.forEach((d: any) => d.posts?.forEach((p: any) => postMap.set(`${w?.weekNumber || wi+1}|${d.day}|${p.slot}`, { format: p.format, hook: p.hook }))));
+  weekData.forEach((w: any, wi) => {
+    const wn = w?.weekNumber || wi + 1;
+    (w?.days || []).forEach((d: any) => (d?.posts || []).forEach((p: any) => postMap.set(`${wn}|${d.day}|${p.slot}`, { format: p.format, hook: p.hook })));
+  });
   const attribution = feedbackData
     .map((f: any) => ({ ...f, post: postMap.get(`${f.week_number}|${f.day}|${f.slot}`) }))
-    .filter((f: any) => f.conversions + f.messages > 0)
-    .sort((a: any, b: any) => (b.conversions * 5 + b.messages) - (a.conversions * 5 + a.messages))
+    .filter((f: any) => (f.conversions || 0) + (f.messages || 0) > 0)
+    .sort((a: any, b: any) => ((b.conversions || 0) * 5 + (b.messages || 0)) - ((a.conversions || 0) * 5 + (a.messages || 0)))
     .slice(0, 3);
 
   // Content Type ROI
   const byFormat: Record<string, { count: number; eng: number; conv: number; dm: number }> = {};
-  weekData.forEach((w: any) => w?.days?.forEach((d: any) => d.posts?.forEach((p: any) => {
-    const key = p.format || "Lainnya";
-    if (!byFormat[key]) byFormat[key] = { count: 0, eng: 0, conv: 0, dm: 0 };
-    byFormat[key].count++;
-    feedbackData.filter((f: any) => f.week_number === (w?.weekNumber) && f.day === d.day && f.slot === p.slot).forEach((m: any) => {
-      byFormat[key].eng += m.likes + m.comments + m.messages;
-      byFormat[key].conv += m.conversions;
-      byFormat[key].dm += m.messages;
-    });
-  })));
+  weekData.forEach((w: any, wi) => {
+    const wn = w?.weekNumber || wi + 1;
+    (w?.days || []).forEach((d: any) => (d?.posts || []).forEach((p: any) => {
+      const key = p.format || "Lainnya";
+      if (!byFormat[key]) byFormat[key] = { count: 0, eng: 0, conv: 0, dm: 0 };
+      byFormat[key].count++;
+      feedbackData.filter((f: any) => f.week_number === wn && f.day === d.day && f.slot === p.slot).forEach((m: any) => {
+        byFormat[key].eng += (m.likes || 0) + (m.comments || 0) + (m.messages || 0);
+        byFormat[key].conv += m.conversions || 0;
+        byFormat[key].dm += m.messages || 0;
+      });
+    }));
+  });
   const contentROI = Object.entries(byFormat).map(([fmt, s]) => ({ format: fmt, count: s.count, roiScore: s.count > 0 ? Math.round((s.conv * 100 + s.dm * 20 + s.eng) / s.count) : 0 })).sort((a, b) => b.roiScore - a.roiScore);
 
   // Burnout
