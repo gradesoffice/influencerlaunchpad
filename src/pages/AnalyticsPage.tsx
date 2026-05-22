@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { BarChart3, TrendingUp, TrendingDown, Heart, MessageCircle, Send, ShoppingCart, ArrowLeft, Loader2, Eye, Users, Trophy, AlertTriangle, Calendar } from "lucide-react";
+import { BarChart3, TrendingUp, TrendingDown, Heart, MessageCircle, Send, ShoppingCart, ArrowLeft, Loader2, Eye, Users, Trophy, AlertTriangle, Calendar, Target, Activity, Award, Zap } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,14 +12,24 @@ const COLORS = ["#6366f1", "#f59e0b", "#10b981", "#ef4444", "#8b5cf6", "#06b6d4"
 const PLATFORMS = ["instagram", "tiktok", "youtube", "twitter/x", "facebook", "threads", "linkedin", "whatsapp channel"];
 
 type FbRow = { week_number: number; day: number; slot: string; likes: number; comments: number; messages: number; conversions: number; reach: number; posted_at: string | null; platform: string };
+type WeekRow = { week_number: number; data: any };
 
 export default function AnalyticsPage() {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<FbRow[]>([]);
+  const [weekData, setWeekData] = useState<WeekRow[]>([]);
   const [strategies, setStrategies] = useState<any[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
   const [platformFilter, setPlatformFilter] = useState<string>("all");
   const [periodView, setPeriodView] = useState<"week" | "day" | "month">("week");
+  const [followerGoal, setFollowerGoal] = useState<number>(() => {
+    const v = localStorage.getItem("ila_follower_goal");
+    return v ? parseInt(v) : 1000;
+  });
+  const [currentFollowers, setCurrentFollowers] = useState<number>(() => {
+    const v = localStorage.getItem("ila_current_followers");
+    return v ? parseInt(v) : 0;
+  });
 
   useEffect(() => { load(); }, []);
   const load = async () => {
@@ -28,8 +39,18 @@ export default function AnalyticsPage() {
   };
   const sel = async (id: string) => {
     setSelected(id);
-    const { data: fb } = await supabase.from("feedback").select("week_number, day, slot, likes, comments, messages, conversions, reach, posted_at, platform").eq("strategy_id", id);
+    const [{ data: fb }, { data: weeks }] = await Promise.all([
+      supabase.from("feedback").select("week_number, day, slot, likes, comments, messages, conversions, reach, posted_at, platform").eq("strategy_id", id),
+      supabase.from("weeks").select("week_number, data").eq("strategy_id", id).order("week_number"),
+    ]);
     setData((fb ?? []) as FbRow[]);
+    setWeekData((weeks ?? []) as WeekRow[]);
+  };
+
+  const saveGoal = (g: number, c: number) => {
+    setFollowerGoal(g); setCurrentFollowers(c);
+    localStorage.setItem("ila_follower_goal", String(g));
+    localStorage.setItem("ila_current_followers", String(c));
   };
 
   const filtered = useMemo(() => platformFilter === "all" ? data : data.filter(d => d.platform === platformFilter), [data, platformFilter]);
@@ -69,6 +90,140 @@ export default function AnalyticsPage() {
 
   // Top & worst content
   const ranked = useMemo(() => filtered.map(f => ({ ...f, score: f.conversions * 5 + f.messages * 2 + f.comments * 1.5 + f.likes * 0.1 })).filter(f => f.score > 0).sort((a, b) => b.score - a.score), [filtered]);
+
+  // === FUNNEL VISUALIZATION ===
+  const funnel = useMemo(() => {
+    const reach = totals.reach;
+    const eng = totalEng;
+    const dm = totals.messages;
+    const conv = totals.conversions;
+    return [
+      { stage: "Reach", value: reach, pct: 100 },
+      { stage: "Engagement", value: eng, pct: reach > 0 ? (eng / reach) * 100 : 0 },
+      { stage: "DM", value: dm, pct: reach > 0 ? (dm / reach) * 100 : 0 },
+      { stage: "Konversi", value: conv, pct: reach > 0 ? (conv / reach) * 100 : 0 },
+    ];
+  }, [totals, totalEng]);
+
+  const funnelLeak = useMemo(() => {
+    if (totals.reach === 0) return null;
+    const drops = [
+      { from: "Reach", to: "Engagement", drop: 100 - (totalEng / totals.reach * 100) },
+      { from: "Engagement", to: "DM", drop: totalEng > 0 ? 100 - (totals.messages / totalEng * 100) : 0 },
+      { from: "DM", to: "Konversi", drop: totals.messages > 0 ? 100 - (totals.conversions / totals.messages * 100) : 0 },
+    ];
+    return drops.sort((a, b) => b.drop - a.drop)[0];
+  }, [totals, totalEng]);
+
+  // === COHORT ANALYSIS ===
+  const cohort = useMemo(() => {
+    const byWeek = new Map<number, { posts: number; eng: number; reach: number; conv: number }>();
+    filtered.forEach(f => {
+      const c = byWeek.get(f.week_number) ?? { posts: 0, eng: 0, reach: 0, conv: 0 };
+      c.posts++; c.eng += f.likes + f.comments + f.messages; c.reach += f.reach || 0; c.conv += f.conversions;
+      byWeek.set(f.week_number, c);
+    });
+    return Array.from(byWeek.entries()).sort((a, b) => a[0] - b[0]).map(([w, d]) => ({
+      week: `W${w}`,
+      avgEng: d.posts > 0 ? Math.round(d.eng / d.posts) : 0,
+      er: d.reach > 0 ? +(d.eng / d.reach * 100).toFixed(1) : 0,
+      conv: d.conv,
+    }));
+  }, [filtered]);
+
+  const cohortTrend = useMemo(() => {
+    if (cohort.length < 2) return null;
+    const first = cohort[0].avgEng;
+    const last = cohort[cohort.length - 1].avgEng;
+    const change = first > 0 ? Math.round((last - first) / first * 100) : 0;
+    return { change, direction: change >= 0 ? "growth" : "decay" as const };
+  }, [cohort]);
+
+  // === ATTRIBUTION TRACKER ===
+  const attribution = useMemo(() => {
+    // Build map: slot -> post info from weekData
+    const postMap = new Map<string, { format: string; hook: string }>();
+    weekData.forEach(w => {
+      w.data?.days?.forEach((d: any) => {
+        d.posts?.forEach((p: any) => {
+          postMap.set(`${w.week_number}|${d.day}|${p.slot}`, { format: p.format, hook: p.hook });
+        });
+      });
+    });
+    return filtered
+      .map(f => ({ ...f, post: postMap.get(`${f.week_number}|${f.day}|${f.slot}`) }))
+      .filter(f => f.conversions + f.messages > 0)
+      .sort((a, b) => (b.conversions * 5 + b.messages) - (a.conversions * 5 + a.messages))
+      .slice(0, 5);
+  }, [filtered, weekData]);
+
+  // === CONTENT TYPE ROI ===
+  const contentTypeROI = useMemo(() => {
+    const byFormat: Record<string, { count: number; eng: number; reach: number; conv: number; dm: number }> = {};
+    weekData.forEach(w => {
+      w.data?.days?.forEach((d: any) => {
+        d.posts?.forEach((p: any) => {
+          const key = p.format || "Lainnya";
+          if (!byFormat[key]) byFormat[key] = { count: 0, eng: 0, reach: 0, conv: 0, dm: 0 };
+          byFormat[key].count++;
+          // Match feedback for this post
+          const matches = filtered.filter(f => f.week_number === w.week_number && f.day === d.day && f.slot === p.slot);
+          matches.forEach(m => {
+            byFormat[key].eng += m.likes + m.comments + m.messages;
+            byFormat[key].reach += m.reach || 0;
+            byFormat[key].conv += m.conversions;
+            byFormat[key].dm += m.messages;
+          });
+        });
+      });
+    });
+    return Object.entries(byFormat)
+      .map(([fmt, s]) => ({
+        format: fmt,
+        count: s.count,
+        avgEng: s.count > 0 ? Math.round(s.eng / s.count) : 0,
+        convPerPost: s.count > 0 ? +(s.conv / s.count).toFixed(2) : 0,
+        roiScore: s.count > 0 ? Math.round((s.conv * 100 + s.dm * 20 + s.eng) / s.count) : 0,
+      }))
+      .sort((a, b) => b.roiScore - a.roiScore);
+  }, [weekData, filtered]);
+
+  // === BURNOUT ALERT ===
+  const burnout = useMemo(() => {
+    const now = new Date();
+    const last7 = filtered.filter(f => f.posted_at && (now.getTime() - new Date(f.posted_at).getTime()) / 86400000 <= 7);
+    const prev7 = filtered.filter(f => {
+      if (!f.posted_at) return false;
+      const age = (now.getTime() - new Date(f.posted_at).getTime()) / 86400000;
+      return age > 7 && age <= 14;
+    });
+    const freqDrop = prev7.length > 0 ? Math.round((1 - last7.length / prev7.length) * 100) : 0;
+    const engLast = last7.reduce((s, f) => s + f.likes + f.comments + f.messages, 0);
+    const engPrev = prev7.reduce((s, f) => s + f.likes + f.comments + f.messages, 0);
+    const engDrop = engPrev > 0 ? Math.round((1 - engLast / engPrev) * 100) : 0;
+    const alerts: { level: "danger" | "warning" | "info"; text: string }[] = [];
+    if (freqDrop >= 30) alerts.push({ level: "danger", text: `Frekuensi posting turun ${freqDrop}% minggu ini. Risiko burnout tinggi.` });
+    else if (freqDrop >= 15) alerts.push({ level: "warning", text: `Frekuensi posting turun ${freqDrop}%. Jaga konsistensi.` });
+    if (engDrop >= 30) alerts.push({ level: "warning", text: `Engagement turun ${engDrop}%. Variasikan format & hook.` });
+    if (last7.length === 0 && prev7.length > 0) alerts.push({ level: "danger", text: "Belum ada konten minggu ini. Jangan biarkan momentum hilang." });
+    if (last7.length >= prev7.length && engDrop < 0) alerts.push({ level: "info", text: "Konsisten & engagement naik. Pertahankan!" });
+    return { alerts, last7Count: last7.length, prev7Count: prev7.length };
+  }, [filtered]);
+
+  // === GOAL TRACKING ===
+  const goalProjection = useMemo(() => {
+    if (followerGoal <= 0 || currentFollowers >= followerGoal) return null;
+    // Estimate growth from engagement (rough heuristic: every 10 reach ~ 1 follower potential)
+    const last30 = filtered.filter(f => f.posted_at && (new Date().getTime() - new Date(f.posted_at).getTime()) / 86400000 <= 30);
+    const reachPerWeek = last30.length > 0 ? last30.reduce((s, f) => s + (f.reach || 0), 0) / 4 : 0;
+    const estFollowerGrowthPerWeek = Math.round(reachPerWeek * 0.005); // 0.5% reach -> follower
+    const gap = followerGoal - currentFollowers;
+    const weeksNeeded = estFollowerGrowthPerWeek > 0 ? Math.ceil(gap / estFollowerGrowthPerWeek) : -1;
+    const monthEnd = new Date(); monthEnd.setMonth(monthEnd.getMonth() + 1);
+    const projectedAtMonthEnd = currentFollowers + estFollowerGrowthPerWeek * 4;
+    const onTrack = projectedAtMonthEnd >= followerGoal;
+    return { gap, weeksNeeded, projectedAtMonthEnd, onTrack, estFollowerGrowthPerWeek };
+  }, [filtered, followerGoal, currentFollowers]);
 
   if (loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
 
@@ -112,6 +267,131 @@ export default function AnalyticsPage() {
             <CompStat label="Konversi" value={comparison.conv} />
           </div>
         </Card>
+
+        {/* === BURNOUT ALERT === */}
+        {burnout.alerts.length > 0 && <Card className="p-4">
+          <p className="text-xs font-semibold mb-3 flex items-center gap-2"><Activity className="h-4 w-4 text-rose-500" />Burnout Monitor</p>
+          <div className="space-y-2">
+            {burnout.alerts.map((a, i) => (
+              <div key={i} className={`rounded-lg p-2.5 text-[11px] ${a.level === "danger" ? "bg-rose-50 text-rose-800" : a.level === "warning" ? "bg-amber-50 text-amber-800" : "bg-emerald-50 text-emerald-800"}`}>
+                {a.level === "danger" ? "🚨" : a.level === "warning" ? "⚠️" : "✨"} {a.text}
+              </div>
+            ))}
+            <div className="flex justify-between text-[10px] text-muted-foreground pt-1">
+              <span>Minggu ini: {burnout.last7Count} post</span>
+              <span>Minggu lalu: {burnout.prev7Count} post</span>
+            </div>
+          </div>
+        </Card>}
+
+        {/* === GOAL TRACKING === */}
+        <Card className="p-4">
+          <p className="text-xs font-semibold mb-3 flex items-center gap-2"><Target className="h-4 w-4 text-primary" />Goal Tracking</p>
+          <div className="grid grid-cols-2 gap-2 mb-3">
+            <div><p className="text-[10px] text-muted-foreground">Follower sekarang</p><Input type="number" value={currentFollowers} onChange={e => saveGoal(followerGoal, parseInt(e.target.value) || 0)} className="h-8 text-xs" /></div>
+            <div><p className="text-[10px] text-muted-foreground">Target follower</p><Input type="number" value={followerGoal} onChange={e => saveGoal(parseInt(e.target.value) || 0, currentFollowers)} className="h-8 text-xs" /></div>
+          </div>
+          {goalProjection && <>
+            <div className="h-3 rounded-full bg-muted overflow-hidden mb-2">
+              <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${Math.min(100, (currentFollowers / followerGoal) * 100)}%` }} />
+            </div>
+            <div className="flex justify-between text-[10px] text-muted-foreground mb-2">
+              <span>{currentFollowers}</span><span>{Math.round((currentFollowers / followerGoal) * 100)}%</span><span>{followerGoal}</span>
+            </div>
+            <div className={`rounded-lg p-2.5 text-[11px] ${goalProjection.onTrack ? "bg-emerald-50 text-emerald-800" : "bg-amber-50 text-amber-800"}`}>
+              {goalProjection.onTrack ? "🚀" : "⚡"} Proyeksi akhir bulan: <strong>{goalProjection.projectedAtMonthEnd}</strong> follower.
+              {!goalProjection.onTrack && goalProjection.weeksNeeded > 0 && ` Untuk capai ${followerGoal}, butuh ~${goalProjection.weeksNeeded} minggu dengan rate sekarang. Tingkatkan posting rate atau reach.`}
+              {goalProjection.estFollowerGrowthPerWeek === 0 && " Belum ada data reach. Catat reach di setiap konten."}
+            </div>
+          </>}
+          {currentFollowers >= followerGoal && followerGoal > 0 && <div className="rounded-lg p-2.5 bg-emerald-50 text-emerald-800 text-[11px]">🏆 Target tercapai! Set target baru.</div>}
+        </Card>
+
+        {/* === FUNNEL VISUALIZATION === */}
+        {totals.reach > 0 && <Card className="p-4">
+          <p className="text-xs font-semibold mb-3 flex items-center gap-2"><Zap className="h-4 w-4 text-amber-500" />Conversion Funnel</p>
+          <div className="space-y-2">
+            {funnel.map((f, i) => {
+              const widthPct = i === 0 ? 100 : f.pct;
+              return (
+                <div key={f.stage}>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs w-20 shrink-0">{f.stage}</span>
+                    <div className="flex-1 h-7 rounded-md bg-muted/40 overflow-hidden relative">
+                      <div className="h-full rounded-md transition-all flex items-center justify-end pr-2" style={{ width: `${Math.max(widthPct, 5)}%`, background: COLORS[i] }}>
+                        <span className="text-[10px] text-white font-bold">{f.value.toLocaleString()}</span>
+                      </div>
+                    </div>
+                    <span className="text-[10px] text-muted-foreground w-12 text-right">{f.pct.toFixed(1)}%</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          {funnelLeak && funnelLeak.drop > 50 && <div className="mt-3 rounded-lg p-2.5 bg-rose-50 text-rose-800 text-[11px]">
+            🚨 Bocor terbesar: <strong>{funnelLeak.from} → {funnelLeak.to}</strong> turun {funnelLeak.drop.toFixed(0)}%. Fokus optimasi di tahap ini.
+          </div>}
+        </Card>}
+
+        {/* === COHORT ANALYSIS === */}
+        {cohort.length >= 2 && <Card className="p-4">
+          <p className="text-xs font-semibold mb-3 flex items-center gap-2"><BarChart3 className="h-4 w-4 text-violet-500" />Cohort: Engagement per Minggu</p>
+          <ResponsiveContainer width="100%" height={180}>
+            <BarChart data={cohort}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="week" tick={{ fontSize: 10 }} />
+              <YAxis tick={{ fontSize: 10 }} />
+              <Tooltip />
+              <Bar dataKey="avgEng" fill="#8b5cf6" name="Avg Engagement" />
+            </BarChart>
+          </ResponsiveContainer>
+          {cohortTrend && <div className={`mt-2 rounded-lg p-2.5 text-[11px] ${cohortTrend.direction === "growth" ? "bg-emerald-50 text-emerald-800" : "bg-rose-50 text-rose-800"}`}>
+            {cohortTrend.direction === "growth" ? "📈" : "📉"} Pattern: <strong>{cohortTrend.direction === "growth" ? "Growth" : "Decay"}</strong>. Cohort terbaru {cohortTrend.change >= 0 ? "+" : ""}{cohortTrend.change}% vs cohort awal.
+          </div>}
+        </Card>}
+
+        {/* === ATTRIBUTION TRACKER === */}
+        {attribution.length > 0 && <Card className="p-4">
+          <p className="text-xs font-semibold mb-3 flex items-center gap-2"><Award className="h-4 w-4 text-emerald-500" />Top Konversi (Business Outcome)</p>
+          <div className="space-y-2">
+            {attribution.map((a, i) => (
+              <div key={i} className="rounded-lg bg-emerald-50/40 p-2.5">
+                <div className="flex items-center justify-between mb-1">
+                  <Badge variant="secondary" className="text-[9px]">{a.post?.format || "—"}</Badge>
+                  <span className="text-[10px] text-muted-foreground capitalize">{a.platform} · W{a.week_number}</span>
+                </div>
+                {a.post?.hook && <p className="text-[11px] line-clamp-1 mb-1">🪝 {a.post.hook}</p>}
+                <div className="flex gap-3 text-[10px]">
+                  <span className="text-emerald-700 font-bold">🛒 {a.conversions} konversi</span>
+                  <span className="text-blue-700">📩 {a.messages} DM</span>
+                  <span className="text-muted-foreground">❤️ {a.likes}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>}
+
+        {/* === CONTENT TYPE ROI === */}
+        {contentTypeROI.length > 0 && <Card className="p-4">
+          <p className="text-xs font-semibold mb-3 flex items-center gap-2"><Trophy className="h-4 w-4 text-amber-500" />Content Type ROI</p>
+          <div className="space-y-2">
+            {contentTypeROI.map((c, i) => (
+              <div key={c.format} className="rounded-lg bg-white p-2.5 border">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs font-medium capitalize">{c.format}</span>
+                  <Badge className={i === 0 ? "bg-amber-500" : "bg-muted text-muted-foreground"}>{i === 0 ? "🏆 Best" : `#${i + 1}`}</Badge>
+                </div>
+                <div className="grid grid-cols-4 gap-2 text-center text-[10px]">
+                  <div><p className="font-bold">{c.count}</p><p className="text-muted-foreground">Posts</p></div>
+                  <div><p className="font-bold">{c.avgEng}</p><p className="text-muted-foreground">Avg Eng</p></div>
+                  <div><p className="font-bold text-emerald-600">{c.convPerPost}</p><p className="text-muted-foreground">Conv/Post</p></div>
+                  <div><p className="font-bold text-primary">{c.roiScore}</p><p className="text-muted-foreground">ROI Score</p></div>
+                </div>
+              </div>
+            ))}
+          </div>
+          {contentTypeROI[0] && contentTypeROI.length > 1 && <p className="text-[10px] text-muted-foreground mt-2 italic">💡 Format <strong>{contentTypeROI[0].format}</strong> paling efektif. Perbanyak konten tipe ini.</p>}
+        </Card>}
 
         {/* Chart */}
         {weeklyChart.length > 1 && <Card className="p-4">
