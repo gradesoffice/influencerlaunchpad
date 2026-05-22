@@ -796,13 +796,15 @@ function AnalitikInline({ strategyId }: { strategyId: string | null }) {
   const [loading, setLoading] = useState(true);
   const [weekData, setWeekData] = useState<WeekPlan[]>([]);
   const [feedbackData, setFeedbackData] = useState<Feedback[]>([]);
+  const [followerGoal, setFollowerGoal] = useState<number>(() => parseInt(localStorage.getItem("ila_follower_goal") || "1000"));
+  const [currentFollowers, setCurrentFollowers] = useState<number>(() => parseInt(localStorage.getItem("ila_current_followers") || "0"));
 
   useEffect(() => {
     if (!strategyId) { setLoading(false); return; }
     (async () => {
       const [{ data: w }, { data: f }] = await Promise.all([
         supabase.from("weeks").select("week_number, data").eq("strategy_id", strategyId).order("week_number"),
-        supabase.from("feedback").select("week_number, day, slot, likes, comments, messages, conversions, note").eq("strategy_id", strategyId),
+        supabase.from("feedback").select("week_number, day, slot, likes, comments, messages, conversions, reach, posted_at, platform, note").eq("strategy_id", strategyId),
       ]);
       setWeekData((w ?? []).map((x: any) => x.data));
       setFeedbackData((f ?? []) as any);
@@ -810,37 +812,181 @@ function AnalitikInline({ strategyId }: { strategyId: string | null }) {
     })();
   }, [strategyId]);
 
+  const saveGoal = (g: number, c: number) => {
+    setFollowerGoal(g); setCurrentFollowers(c);
+    localStorage.setItem("ila_follower_goal", String(g));
+    localStorage.setItem("ila_current_followers", String(c));
+  };
+
   if (loading) return <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>;
 
-  const totals = feedbackData.reduce((a: any, f: any) => ({ posts: a.posts + 1, likes: a.likes + f.likes, comments: a.comments + f.comments, messages: a.messages + f.messages, conversions: a.conversions + f.conversions }), { posts: 0, likes: 0, comments: 0, messages: 0, conversions: 0 });
+  // Totals
+  const totals = feedbackData.reduce((a: any, f: any) => ({ posts: a.posts + 1, likes: a.likes + f.likes, comments: a.comments + f.comments, messages: a.messages + f.messages, conversions: a.conversions + f.conversions, reach: a.reach + (f.reach || 0) }), { posts: 0, likes: 0, comments: 0, messages: 0, conversions: 0, reach: 0 });
   const totalPosts = weekData.reduce((s, w) => s + (w?.days?.reduce((a: number, d: any) => a + (d.posts?.length ?? 0), 0) ?? 0), 0);
-  const avgEng = totals.posts > 0 ? Math.round((totals.likes + totals.comments + totals.messages) / totals.posts) : 0;
+  const totalEng = totals.likes + totals.comments + totals.messages;
+  const er = totals.reach > 0 ? ((totalEng / totals.reach) * 100).toFixed(1) : "—";
+  const cr = totals.reach > 0 ? ((totals.conversions / totals.reach) * 100).toFixed(2) : "—";
 
-  const formatCounts: Record<string, number> = {};
-  weekData.forEach((w: any) => w?.days?.forEach((d: any) => d.posts?.forEach((p: any) => { formatCounts[p.format || "Lainnya"] = (formatCounts[p.format || "Lainnya"] ?? 0) + 1; })));
-  const sorted = Object.entries(formatCounts).sort((a, b) => b[1] - a[1]);
+  // Funnel
+  const funnel = [
+    { stage: "Reach", value: totals.reach, pct: 100 },
+    { stage: "Engagement", value: totalEng, pct: totals.reach > 0 ? (totalEng / totals.reach) * 100 : 0 },
+    { stage: "DM", value: totals.messages, pct: totals.reach > 0 ? (totals.messages / totals.reach) * 100 : 0 },
+    { stage: "Konversi", value: totals.conversions, pct: totals.reach > 0 ? (totals.conversions / totals.reach) * 100 : 0 },
+  ];
+
+  // Cohort
+  const cohortMap = new Map<number, { posts: number; eng: number }>();
+  feedbackData.forEach((f: any) => {
+    const c = cohortMap.get(f.week_number) ?? { posts: 0, eng: 0 };
+    c.posts++; c.eng += f.likes + f.comments + f.messages;
+    cohortMap.set(f.week_number, c);
+  });
+  const cohort = Array.from(cohortMap.entries()).sort((a, b) => a[0] - b[0]).map(([w, d]) => ({ week: `W${w}`, avgEng: d.posts > 0 ? Math.round(d.eng / d.posts) : 0 }));
+
+  // Attribution top 3
+  const postMap = new Map<string, { format: string; hook: string }>();
+  weekData.forEach((w: any, wi) => w?.days?.forEach((d: any) => d.posts?.forEach((p: any) => postMap.set(`${w?.weekNumber || wi+1}|${d.day}|${p.slot}`, { format: p.format, hook: p.hook }))));
+  const attribution = feedbackData
+    .map((f: any) => ({ ...f, post: postMap.get(`${f.week_number}|${f.day}|${f.slot}`) }))
+    .filter((f: any) => f.conversions + f.messages > 0)
+    .sort((a: any, b: any) => (b.conversions * 5 + b.messages) - (a.conversions * 5 + a.messages))
+    .slice(0, 3);
+
+  // Content Type ROI
+  const byFormat: Record<string, { count: number; eng: number; conv: number; dm: number }> = {};
+  weekData.forEach((w: any) => w?.days?.forEach((d: any) => d.posts?.forEach((p: any) => {
+    const key = p.format || "Lainnya";
+    if (!byFormat[key]) byFormat[key] = { count: 0, eng: 0, conv: 0, dm: 0 };
+    byFormat[key].count++;
+    feedbackData.filter((f: any) => f.week_number === (w?.weekNumber) && f.day === d.day && f.slot === p.slot).forEach((m: any) => {
+      byFormat[key].eng += m.likes + m.comments + m.messages;
+      byFormat[key].conv += m.conversions;
+      byFormat[key].dm += m.messages;
+    });
+  })));
+  const contentROI = Object.entries(byFormat).map(([fmt, s]) => ({ format: fmt, count: s.count, roiScore: s.count > 0 ? Math.round((s.conv * 100 + s.dm * 20 + s.eng) / s.count) : 0 })).sort((a, b) => b.roiScore - a.roiScore);
+
+  // Burnout
+  const now = new Date();
+  const last7 = feedbackData.filter((f: any) => f.posted_at && (now.getTime() - new Date(f.posted_at).getTime()) / 86400000 <= 7);
+  const prev7 = feedbackData.filter((f: any) => { if (!f.posted_at) return false; const age = (now.getTime() - new Date(f.posted_at).getTime()) / 86400000; return age > 7 && age <= 14; });
+  const freqDrop = prev7.length > 0 ? Math.round((1 - last7.length / prev7.length) * 100) : 0;
+  const burnoutAlerts: { level: string; text: string }[] = [];
+  if (freqDrop >= 30) burnoutAlerts.push({ level: "danger", text: `Frekuensi posting turun ${freqDrop}% minggu ini.` });
+  else if (freqDrop >= 15) burnoutAlerts.push({ level: "warning", text: `Frekuensi turun ${freqDrop}%. Jaga konsistensi.` });
+  if (last7.length === 0 && prev7.length > 0) burnoutAlerts.push({ level: "danger", text: "Belum ada konten minggu ini." });
+
+  // Goal projection
+  const last30 = feedbackData.filter((f: any) => f.posted_at && (now.getTime() - new Date(f.posted_at).getTime()) / 86400000 <= 30);
+  const reachPerWeek = last30.length > 0 ? last30.reduce((s: number, f: any) => s + (f.reach || 0), 0) / 4 : 0;
+  const estGrowth = Math.round(reachPerWeek * 0.005);
+  const projectedAtMonth = currentFollowers + estGrowth * 4;
+  const onTrack = projectedAtMonth >= followerGoal;
 
   return (
     <div className="space-y-4">
       <h2 className="text-lg font-bold flex items-center gap-2"><BarChart3 className="h-5 w-5 text-primary" />Analitik</h2>
+
+      {/* Overview cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Card className="p-4"><p className="text-xs text-muted-foreground">Konten</p><p className="text-2xl font-bold">{totalPosts}</p></Card>
         <Card className="p-4"><p className="text-xs text-muted-foreground">Likes</p><p className="text-2xl font-bold text-rose-500">{totals.likes}</p></Card>
-        <Card className="p-4"><p className="text-xs text-muted-foreground">Avg Engagement</p><p className="text-2xl font-bold text-primary">{avgEng}</p></Card>
+        <Card className="p-4"><p className="text-xs text-muted-foreground">Engagement Rate</p><p className="text-2xl font-bold text-primary">{er}{er !== "—" ? "%" : ""}</p></Card>
         <Card className="p-4"><p className="text-xs text-muted-foreground">Konversi</p><p className="text-2xl font-bold text-emerald-500">{totals.conversions}</p></Card>
       </div>
-      {sorted.length > 0 && <Card className="p-5"><p className="text-xs font-semibold uppercase text-muted-foreground mb-3">Format Distribution</p>
-        <div className="space-y-2">{sorted.slice(0, 6).map(([fmt, count], i) => <div key={i} className="flex items-center gap-3"><span className="text-xs w-24 truncate">{fmt}</span><div className="flex-1 h-2.5 rounded-full bg-muted overflow-hidden"><div className="h-full rounded-full" style={{ width: `${(count / (sorted[0][1])) * 100}%`, background: ["#6366f1","#f59e0b","#10b981","#ef4444","#8b5cf6","#06b6d4"][i % 6] }} /></div><span className="text-xs text-muted-foreground font-medium">{count}</span></div>)}</div>
-      </Card>}
-      {totals.posts > 0 && <Card className="p-5"><p className="text-xs font-semibold uppercase text-muted-foreground mb-3">Performa Detail</p>
-        <div className="grid grid-cols-2 gap-3">
-          <div><p className="text-xs text-muted-foreground">Total DM</p><p className="text-xl font-bold">{totals.messages}</p></div>
-          <div><p className="text-xs text-muted-foreground">Total Komentar</p><p className="text-xl font-bold">{totals.comments}</p></div>
-          <div><p className="text-xs text-muted-foreground">Conversion Rate</p><p className="text-xl font-bold">{totals.posts > 0 ? ((totals.conversions / totals.posts) * 100).toFixed(1) : 0}%</p></div>
-          <div><p className="text-xs text-muted-foreground">Konten Tercatat</p><p className="text-xl font-bold">{totals.posts}</p></div>
+
+      {/* Burnout */}
+      <Card className="p-4">
+        <p className="text-xs font-semibold mb-3">🚨 Burnout Monitor</p>
+        {burnoutAlerts.length > 0 ? <div className="space-y-2">
+          {burnoutAlerts.map((a, i) => <div key={i} className={`rounded-lg p-2.5 text-[11px] ${a.level === "danger" ? "bg-rose-50 text-rose-800" : "bg-amber-50 text-amber-800"}`}>{a.level === "danger" ? "🚨" : "⚠️"} {a.text}</div>)}
+        </div> : <div className="rounded-lg bg-emerald-50 p-2.5 text-[11px] text-emerald-800">✨ Frekuensi posting stabil. Pertahankan konsistensi.</div>}
+        <div className="flex justify-between text-[10px] text-muted-foreground pt-2"><span>7 hari ini: {last7.length} post</span><span>7 hari lalu: {prev7.length} post</span></div>
+      </Card>
+
+      {/* Goal Tracking */}
+      <Card className="p-4">
+        <p className="text-xs font-semibold mb-3">🎯 Goal Tracking</p>
+        <div className="grid grid-cols-2 gap-2 mb-3">
+          <div><p className="text-[10px] text-muted-foreground">Follower sekarang</p><Input type="number" value={currentFollowers} onChange={e => saveGoal(followerGoal, parseInt(e.target.value) || 0)} className="h-8 text-xs" /></div>
+          <div><p className="text-[10px] text-muted-foreground">Target follower</p><Input type="number" value={followerGoal} onChange={e => saveGoal(parseInt(e.target.value) || 0, currentFollowers)} className="h-8 text-xs" /></div>
         </div>
-      </Card>}
-      {totals.posts === 0 && <Card className="p-8 text-center"><p className="text-muted-foreground">Catat performa konten di tab Konten untuk melihat analitik.</p></Card>}
+        <div className="h-3 rounded-full bg-muted overflow-hidden mb-2">
+          <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${Math.min(100, followerGoal > 0 ? (currentFollowers / followerGoal) * 100 : 0)}%` }} />
+        </div>
+        <div className="flex justify-between text-[10px] text-muted-foreground mb-2"><span>{currentFollowers}</span><span>{followerGoal > 0 ? Math.round((currentFollowers / followerGoal) * 100) : 0}%</span><span>{followerGoal}</span></div>
+        <div className={`rounded-lg p-2.5 text-[11px] ${onTrack && estGrowth > 0 ? "bg-emerald-50 text-emerald-800" : "bg-amber-50 text-amber-800"}`}>
+          {estGrowth > 0 ? <>{onTrack ? "🚀" : "⚡"} Proyeksi akhir bulan: <strong>{projectedAtMonth}</strong> follower.{!onTrack && ` Tingkatkan posting rate.`}</> : "📊 Catat reach di setiap konten untuk dapat proyeksi AI."}
+        </div>
+      </Card>
+
+      {/* Funnel */}
+      <Card className="p-4">
+        <p className="text-xs font-semibold mb-3">⚡ Conversion Funnel</p>
+        {totals.reach > 0 ? <div className="space-y-2">
+          {funnel.map((f, i) => <div key={f.stage} className="flex items-center gap-3">
+            <span className="text-xs w-20 shrink-0">{f.stage}</span>
+            <div className="flex-1 h-7 rounded-md bg-muted/40 overflow-hidden">
+              <div className="h-full rounded-md flex items-center justify-end pr-2" style={{ width: `${Math.max(i === 0 ? 100 : f.pct, 5)}%`, background: COLORS[i] }}><span className="text-[10px] text-white font-bold">{f.value.toLocaleString()}</span></div>
+            </div>
+            <span className="text-[10px] text-muted-foreground w-12 text-right">{f.pct.toFixed(1)}%</span>
+          </div>)}
+        </div> : <div className="space-y-2 opacity-40">
+          {["Reach", "Engagement", "DM", "Konversi"].map((s, i) => <div key={s} className="flex items-center gap-3">
+            <span className="text-xs w-20 shrink-0">{s}</span>
+            <div className="flex-1 h-7 rounded-md bg-muted/40 overflow-hidden"><div className="h-full rounded-md" style={{ width: `${100 - i * 25}%`, background: COLORS[i] }} /></div>
+            <span className="text-[10px] text-muted-foreground w-12 text-right">—</span>
+          </div>)}
+          <p className="text-[10px] text-muted-foreground italic text-center pt-2">Catat reach untuk lihat funnel real-mu</p>
+        </div>}
+      </Card>
+
+      {/* Cohort */}
+      <Card className="p-4">
+        <p className="text-xs font-semibold mb-3">📊 Cohort: Engagement per Minggu</p>
+        {cohort.length >= 2 ? <div className="space-y-1.5">
+          {cohort.map(c => <div key={c.week} className="flex items-center gap-3">
+            <span className="text-xs w-10">{c.week}</span>
+            <div className="flex-1 h-5 rounded bg-muted/40 overflow-hidden"><div className="h-full bg-violet-500" style={{ width: `${Math.min(100, (c.avgEng / Math.max(...cohort.map(x => x.avgEng), 1)) * 100)}%` }} /></div>
+            <span className="text-[10px] text-muted-foreground w-12 text-right">{c.avgEng}</span>
+          </div>)}
+        </div> : <p className="text-[11px] text-muted-foreground italic">Butuh minimal 2 minggu data untuk lihat pattern growth/decay.</p>}
+      </Card>
+
+      {/* Attribution */}
+      <Card className="p-4">
+        <p className="text-xs font-semibold mb-3">🏆 Top Konversi (Business Outcome)</p>
+        {attribution.length > 0 ? <div className="space-y-2">
+          {attribution.map((a: any, i) => <div key={i} className="rounded-lg bg-emerald-50/40 p-2.5">
+            <div className="flex items-center justify-between mb-1">
+              <Badge variant="secondary" className="text-[9px]">{a.post?.format || "—"}</Badge>
+              <span className="text-[10px] text-muted-foreground capitalize">{a.platform} · W{a.week_number}</span>
+            </div>
+            {a.post?.hook && <p className="text-[11px] line-clamp-1 mb-1">🪝 {a.post.hook}</p>}
+            <div className="flex gap-3 text-[10px]"><span className="text-emerald-700 font-bold">🛒 {a.conversions}</span><span className="text-blue-700">📩 {a.messages}</span><span className="text-muted-foreground">❤️ {a.likes}</span></div>
+          </div>)}
+        </div> : <p className="text-[11px] text-muted-foreground italic">Catat konversi & DM di tracker untuk lihat konten mana yang menghasilkan business outcome.</p>}
+      </Card>
+
+      {/* Content Type ROI */}
+      <Card className="p-4">
+        <p className="text-xs font-semibold mb-3">💰 Content Type ROI</p>
+        {contentROI.length > 0 ? <div className="space-y-2">
+          {contentROI.slice(0, 5).map((c, i) => <div key={c.format} className="rounded-lg bg-white p-2.5 border">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs font-medium capitalize">{c.format}</span>
+              <Badge className={i === 0 ? "bg-amber-500" : "bg-muted text-muted-foreground"}>{i === 0 ? "🏆 Best" : `#${i + 1}`}</Badge>
+            </div>
+            <div className="flex justify-between text-[10px]"><span className="text-muted-foreground">{c.count} posts</span><span className="font-bold text-primary">ROI: {c.roiScore}</span></div>
+          </div>)}
+          {contentROI[0] && contentROI.length > 1 && <p className="text-[10px] text-muted-foreground mt-2 italic">💡 Format <strong>{contentROI[0].format}</strong> paling efektif. Perbanyak.</p>}
+        </div> : <p className="text-[11px] text-muted-foreground italic">Generate strategi & catat performa untuk lihat format mana yang paling ROI tinggi.</p>}
+      </Card>
+
+      <div className="text-center pt-2">
+        <a href="/analytics" className="text-xs text-primary font-medium">Lihat analitik lengkap →</a>
+      </div>
     </div>
   );
 }
