@@ -37,7 +37,9 @@ export default function DashboardPage() {
   const [activeNav, setActiveNav] = useState("home");
   const [userPlan, setUserPlan] = useState<"free" | "pro" | "business">("free");
   const [userName, setUserName] = useState("");
-  const [trialDaysLeft, setTrialDaysLeft] = useState(7);
+  const [trialDaysLeft, setTrialDaysLeft] = useState(1);
+  const [clickCount, setClickCount] = useState(0);
+  const [showPaywall, setShowPaywall] = useState(false);
 
   useEffect(() => { loadFromDb(); }, []);
   const loadFromDb = async () => {
@@ -74,6 +76,15 @@ export default function DashboardPage() {
   const getAuthHeaders = async () => { const { data: { session } } = await supabase.auth.getSession(); const h: Record<string, string> = { "Content-Type": "application/json" }; if (session?.access_token) h["Authorization"] = `Bearer ${session.access_token}`; return h; };
   const handleLogout = async () => { await supabase.auth.signOut(); navigate("/login"); };
 
+  // Paywall trigger - show after 3 clicks for free users
+  const checkPaywall = () => {
+    if (userPlan !== "free") return false;
+    const newCount = clickCount + 1;
+    setClickCount(newCount);
+    if (newCount >= 3) { setShowPaywall(true); return true; }
+    return false;
+  };
+
   const buildFeedbackInsights = (): string => {
     const entries = Object.entries(feedback).filter(([, v]) => v.likes + v.comments + v.messages + v.conversions > 0);
     if (!entries.length) return "";
@@ -84,6 +95,8 @@ export default function DashboardPage() {
 
   const generateStrategy = async () => {
     if (!form.niche || !form.audience || !form.message || !form.conversionGoal) { toast.error("Lengkapi semua field."); return; }
+    // Paywall for free users
+    if (userPlan === "free") { setShowPaywall(true); return; }
     if (strategy && !confirm("Buat strategi baru? Strategi lama tetap tersimpan di halaman Strategi.")) return;
     setLoadingStrategy(true); setStrategy(null); setStrategyId(null); setWeeks({}); setFeedback({});
     try {
@@ -265,7 +278,7 @@ export default function DashboardPage() {
                   const isOpen = openWeek === wn;
                   return (
                     <div key={wi}>
-                      <button onClick={() => done ? setOpenWeek(isOpen ? null : wn) : generateWeek(wn, phase.name, theme)} className={`w-full rounded-2xl bg-white p-4 shadow-sm flex items-center gap-3 text-left transition hover:shadow-md ${isOpen ? "ring-2 ring-primary/20" : ""}`}>
+                      <button onClick={() => { if (userPlan === "free") { checkPaywall(); return; } done ? setOpenWeek(isOpen ? null : wn) : generateWeek(wn, phase.name, theme); }} className={`w-full rounded-2xl bg-white p-4 shadow-sm flex items-center gap-3 text-left transition hover:shadow-md ${isOpen ? "ring-2 ring-primary/20" : ""}`}>
                         <div className={`h-9 w-9 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${done ? "bg-primary text-white" : "bg-muted text-muted-foreground"}`}>{loadingWeek === wn ? <Loader2 className="h-4 w-4 animate-spin" /> : done ? <Check className="h-4 w-4" /> : wn}</div>
                         <div className="flex-1 min-w-0"><p className="text-sm font-medium truncate">{theme}</p><p className="text-[10px] text-muted-foreground">Hari {(wn-1)*7+1}–{wn*7}</p></div>
                         {!done && <Sparkles className="h-4 w-4 text-primary/50 shrink-0" />}
@@ -327,8 +340,24 @@ export default function DashboardPage() {
       </div>
       <div className="md:hidden h-20" />
 
-      {/* Pricing Modal */}
-      {showPricing && <PricingModal onClose={() => setShowPricing(false)} onUpgrade={() => { setShowPricing(false); navigate("/pricing"); }} />}
+      {/* Paywall Card */}
+      {showPaywall && <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
+        <div className="w-full max-w-sm bg-white rounded-2xl p-6 relative">
+          <button onClick={() => setShowPaywall(false)} className="absolute top-3 right-3 h-7 w-7 rounded-full border flex items-center justify-center text-muted-foreground hover:bg-muted"><X className="h-3.5 w-3.5" /></button>
+          <div className="text-center mb-4"><Crown className="h-10 w-10 text-primary mx-auto mb-2" /><h2 className="text-lg font-bold">Upgrade untuk Akses Penuh</h2><p className="text-xs text-muted-foreground mt-1">Buka semua fitur AI & generate konten tanpa batas.</p></div>
+          <div className="space-y-2 mb-5 text-xs">
+            <div className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-emerald-500" /><span>Generate strategi & konten unlimited</span></div>
+            <div className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-emerald-500" /><span>Analytics & AI Insight lengkap</span></div>
+            <div className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-emerald-500" /><span>Multi-platform tracking</span></div>
+            <div className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-emerald-500" /><span>Roadmap motivational</span></div>
+          </div>
+          <Button onClick={() => { setShowPaywall(false); navigate("/pricing"); }} className="w-full h-11 text-primary-foreground font-semibold" style={{ background: "var(--gradient-hero)" }}>Upgrade Sekarang — Rp 99.000/bln</Button>
+          <p className="text-center text-[10px] text-muted-foreground mt-3">Garansi 7 hari uang kembali</p>
+        </div>
+      </div>}
+
+      {/* Old pricing modal - keep for upgrade button */}
+      {showPricing && !showPaywall && <PricingModal onClose={() => setShowPricing(false)} onUpgrade={() => { setShowPricing(false); navigate("/pricing"); }} />}
     </div>
   );
 }
