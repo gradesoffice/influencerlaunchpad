@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Sparkles, Target, Loader2, Rocket, TrendingUp, Copy, Check, BarChart3, Heart, MessageCircle, Send, ShoppingCart, Crown, Home, Map as MapIcon, FileText, Users, Gauge, Lightbulb, Bell, ChevronRight, X, Settings } from "lucide-react";
+import { Sparkles, Target, Loader2, Rocket, TrendingUp, Copy, Check, BarChart3, Heart, MessageCircle, Send, ShoppingCart, Crown, Home, Map as MapIcon, FileText, Users, Gauge, Lightbulb, Bell, ChevronRight, X, Settings, Eye, Activity, Zap, Award } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -200,14 +200,14 @@ export default function DashboardPage() {
       <main className="flex-1 p-4 md:p-8 overflow-y-auto">
         <div className="max-w-4xl mx-auto space-y-6">
           {/* Header - minimal */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <p className="text-sm font-semibold">{userName || "Hey"} 👋</p>
-              <Badge className={`text-[9px] px-2 py-0.5 ${userPlan === "business" ? "bg-violet-600 text-white" : userPlan === "pro" ? "bg-primary text-white" : "bg-muted text-muted-foreground"}`}>{userPlan === "business" ? "👑 Business" : userPlan === "pro" ? "⚡ Pro" : "Free"}</Badge>
+          <div className="flex items-center justify-between pb-1">
+            <div className="flex items-center gap-2.5">
+              <p className="text-sm font-medium text-foreground">{userName || "Hey"}</p>
+              <span className={`text-[9px] font-semibold px-2 py-0.5 rounded-full ${userPlan === "business" ? "bg-violet-100 text-violet-700" : userPlan === "pro" ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>{userPlan === "business" ? "BUSINESS" : userPlan === "pro" ? "PRO" : "FREE"}</span>
             </div>
-            <div className="flex items-center gap-3">
-              <button onClick={() => setShowForm(true)} title="Edit"><Settings className="h-5 w-5 text-muted-foreground/60 hover:text-primary transition" /></button>
-              {userPlan === "free" && <button onClick={() => setShowPricing(true)} title="Upgrade"><Crown className="h-5 w-5 text-amber-400" /></button>}
+            <div className="flex items-center gap-1">
+              <button onClick={() => setShowForm(true)} className="h-9 w-9 rounded-lg flex items-center justify-center text-muted-foreground/60 hover:bg-muted hover:text-foreground transition" title="Settings"><Settings className="h-4 w-4" /></button>
+              {userPlan === "free" && <button onClick={() => setShowPricing(true)} className="h-9 w-9 rounded-lg flex items-center justify-center text-amber-500 hover:bg-amber-50 transition" title="Upgrade"><Crown className="h-4 w-4" /></button>}
             </div>
           </div>
 
@@ -233,41 +233,36 @@ export default function DashboardPage() {
 
           {/* HOME VIEW */}
           {activeNav === "home" && <>
-            {/* Motivational quote */}
-            <div className="text-center py-3">
-              <p className="text-sm font-bold text-foreground">Konsisten = Algoritma FYP 🔥</p>
-            </div>
-
             {/* Streak */}
-            <div className="rounded-2xl bg-white p-4 shadow-sm flex items-center justify-between">
+            <div className="rounded-xl bg-white p-4 border border-border/40 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-full bg-amber-100 flex items-center justify-center text-lg">🎯</div>
-                <div><p className="text-xs text-muted-foreground">Streak hari ini</p><p className="text-lg font-bold">{Object.values(feedback).filter(f => f.posted_at && new Date(f.posted_at).toDateString() === new Date().toDateString()).length} <span className="text-xs font-normal text-muted-foreground">/ {form.postsPerDay} post</span></p></div>
+                <div className="h-10 w-10 rounded-lg bg-amber-50 flex items-center justify-center"><Target className="h-5 w-5 text-amber-600" /></div>
+                <div><p className="text-[10px] text-muted-foreground uppercase tracking-wide">Streak hari ini</p><p className="text-lg font-bold">{Object.values(feedback).filter(f => f.posted_at && new Date(f.posted_at).toDateString() === new Date().toDateString()).length}<span className="text-xs font-normal text-muted-foreground"> / {form.postsPerDay}</span></p></div>
               </div>
-              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center"><TrendingUp className="h-5 w-5 text-primary" /></div>
+              <TrendingUp className="h-5 w-5 text-muted-foreground/40" />
             </div>
 
             {/* Mini analytics preview (locked for free) */}
-            <div className={`rounded-2xl bg-white p-4 shadow-sm cursor-pointer ${userPlan === "free" ? "opacity-50" : ""}`} onClick={() => setActiveNav("analitik")}>
+            <div className={`rounded-xl bg-white p-4 border border-border/40 cursor-pointer hover:border-primary/30 transition ${userPlan === "free" ? "opacity-50" : ""}`} onClick={() => setActiveNav("analitik")}>
               <div className="flex items-center justify-between mb-3">
-                <p className="text-xs font-semibold">📊 Performa</p>
-                {userPlan === "free" && <Badge variant="outline" className="text-[9px]">🔒 Pro</Badge>}
+                <div className="flex items-center gap-2"><BarChart3 className="h-4 w-4 text-primary" /><p className="text-xs font-semibold">Performa</p></div>
+                {userPlan === "free" && <span className="text-[9px] font-medium text-muted-foreground">PRO</span>}
               </div>
               <div className="grid grid-cols-4 gap-2 text-center">
-                <div><p className="text-lg font-bold">{totalLikes}</p><p className="text-[9px] text-muted-foreground">❤️</p></div>
-                <div><p className="text-lg font-bold">{totalReach > 0 ? `${(totalReach/1000).toFixed(1)}K` : "—"}</p><p className="text-[9px] text-muted-foreground">👁️</p></div>
-                <div><p className="text-lg font-bold">{totalDM}</p><p className="text-[9px] text-muted-foreground">📩</p></div>
-                <div><p className="text-lg font-bold">{totalConversions}</p><p className="text-[9px] text-muted-foreground">🛒</p></div>
+                <div className="flex flex-col items-center gap-1"><Heart className="h-3.5 w-3.5 text-rose-400" /><p className="text-base font-semibold">{totalLikes}</p></div>
+                <div className="flex flex-col items-center gap-1"><Eye className="h-3.5 w-3.5 text-blue-400" /><p className="text-base font-semibold">{totalReach > 0 ? `${(totalReach/1000).toFixed(1)}K` : "—"}</p></div>
+                <div className="flex flex-col items-center gap-1"><Send className="h-3.5 w-3.5 text-violet-400" /><p className="text-base font-semibold">{totalDM}</p></div>
+                <div className="flex flex-col items-center gap-1"><ShoppingCart className="h-3.5 w-3.5 text-emerald-400" /><p className="text-base font-semibold">{totalConversions}</p></div>
               </div>
             </div>
 
             {/* Progress */}
-            <div className="rounded-2xl bg-white p-4 shadow-sm flex items-center gap-4">
+            <div className="rounded-xl bg-white p-4 border border-border/40 flex items-center gap-4">
               <div className="relative h-12 w-12 shrink-0">
                 <svg className="h-12 w-12 -rotate-90"><circle cx="24" cy="24" r="20" fill="none" stroke="#f3f4f6" strokeWidth="4" /><circle cx="24" cy="24" r="20" fill="none" stroke="hsl(var(--primary))" strokeWidth="4" strokeDasharray={`${progressPct * 1.26} 126`} strokeLinecap="round" /></svg>
                 <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold">{progressPct}%</span>
               </div>
-              <div><p className="text-xs font-semibold">{completedWeeks}/{totalWeeksAvailable} minggu</p><p className="text-[10px] text-muted-foreground">Terus gas! 💪</p></div>
+              <div><p className="text-xs font-semibold">{completedWeeks} dari {totalWeeksAvailable} minggu</p><p className="text-[10px] text-muted-foreground">Progress strategi</p></div>
             </div>
           </>}
 
@@ -687,9 +682,9 @@ function InsightView({ feedback, weekData, niche, platform }: { feedback: Feedba
       <h2 className="text-lg font-bold flex items-center gap-2"><Lightbulb className="h-5 w-5 text-amber-500" />AI Insight</h2>
 
       {/* AI Trend Forecast */}
-      <Card className="p-4">
+      <Card className="p-4 border-border/40">
         <div className="flex items-center justify-between mb-3">
-          <p className="text-xs font-semibold">🔮 AI Trend Forecast</p>
+          <div className="flex items-center gap-2"><Sparkles className="h-4 w-4 text-violet-500" /><p className="text-xs font-semibold">AI Trend Forecast</p></div>
           <Button variant="outline" size="sm" className="h-7 text-[10px]" onClick={fetchTrends} disabled={loadingTrends}>{loadingTrends ? <Loader2 className="h-3 w-3 animate-spin" /> : trends ? "Refresh" : "Generate"}</Button>
         </div>
         {trends?.trends ? <div className="space-y-2">
@@ -697,34 +692,34 @@ function InsightView({ feedback, weekData, niche, platform }: { feedback: Feedba
             <div key={i} className="rounded-lg bg-violet-50/50 p-2.5">
               <div className="flex items-center justify-between mb-1">
                 <p className="text-[11px] font-semibold">{t.title}</p>
-                <Badge variant="secondary" className={`text-[8px] ${t.confidence === "high" ? "bg-emerald-100 text-emerald-700" : t.confidence === "medium" ? "bg-amber-100 text-amber-700" : "bg-muted"}`}>{t.confidence}</Badge>
+                <span className={`text-[8px] font-medium px-1.5 py-0.5 rounded ${t.confidence === "high" ? "bg-emerald-100 text-emerald-700" : t.confidence === "medium" ? "bg-amber-100 text-amber-700" : "bg-muted text-muted-foreground"}`}>{t.confidence}</span>
               </div>
               <p className="text-[10px] text-muted-foreground">{t.description}</p>
-              {t.hookIdea && <p className="text-[10px] text-primary mt-1">💡 Hook: "{t.hookIdea}"</p>}
-              {t.format && <Badge variant="outline" className="text-[8px] mt-1">{t.format}</Badge>}
+              {t.hookIdea && <p className="text-[10px] text-primary mt-1 italic">"{t.hookIdea}"</p>}
+              {t.format && <Badge variant="outline" className="text-[8px] mt-1.5 font-normal">{t.format}</Badge>}
             </div>
           ))}
-          <p className="text-[9px] text-muted-foreground italic text-center">Cache 7 hari · Niche: {niche}</p>
+          <p className="text-[9px] text-muted-foreground italic text-center pt-1">Cache 7 hari · {niche}</p>
         </div> : <p className="text-[11px] text-muted-foreground italic">Klik Generate untuk prediksi trend bulan ini di niche-mu.</p>}
       </Card>
 
       {/* AI Content Doctor */}
-      <Card className="p-4">
+      <Card className="p-4 border-border/40">
         <div className="flex items-center justify-between mb-3">
-          <p className="text-xs font-semibold">🩺 Content Doctor</p>
+          <div className="flex items-center gap-2"><Activity className="h-4 w-4 text-rose-500" /><p className="text-xs font-semibold">Content Doctor</p></div>
           <Button variant="outline" size="sm" className="h-7 text-[10px]" onClick={runDoctor} disabled={loadingDoctor}>{loadingDoctor ? <Loader2 className="h-3 w-3 animate-spin" /> : "Diagnosa"}</Button>
         </div>
         <p className="text-[10px] text-muted-foreground mb-2">AI analisis konten terburuk-mu & kasih fix otomatis.</p>
         {doctorResult && <div className="space-y-2">
-          <div className="rounded-lg bg-rose-50 p-2.5"><p className="text-[11px] text-rose-800 font-semibold">Diagnosis:</p><p className="text-[10px] text-rose-700">{doctorResult.diagnosis}</p></div>
-          {doctorResult.issues?.length > 0 && <div className="rounded-lg bg-amber-50 p-2.5"><p className="text-[11px] text-amber-800 font-semibold">Issues:</p>{doctorResult.issues.map((iss: string, i: number) => <p key={i} className="text-[10px] text-amber-700">• {iss}</p>)}</div>}
+          <div className="rounded-lg bg-rose-50 p-2.5"><p className="text-[10px] text-rose-800 font-semibold uppercase tracking-wide mb-1">Diagnosis</p><p className="text-[11px] text-rose-700">{doctorResult.diagnosis}</p></div>
+          {doctorResult.issues?.length > 0 && <div className="rounded-lg bg-amber-50 p-2.5"><p className="text-[10px] text-amber-800 font-semibold uppercase tracking-wide mb-1">Issues</p>{doctorResult.issues.map((iss: string, i: number) => <p key={i} className="text-[10px] text-amber-700">• {iss}</p>)}</div>}
           {doctorResult.fixes?.length > 0 && <div className="space-y-2">{doctorResult.fixes.map((fix: any, i: number) => (
             <div key={i} className="rounded-lg bg-emerald-50 p-2.5">
-              <p className="text-[10px] text-emerald-800 font-semibold">Fix #{fix.version}:</p>
-              <p className="text-[10px]">🪝 {fix.hook}</p>
-              <p className="text-[10px] text-muted-foreground">{fix.caption}</p>
-              <p className="text-[10px] text-primary">CTA: {fix.cta}</p>
-              <p className="text-[9px] text-muted-foreground italic mt-1">↳ {fix.why}</p>
+              <p className="text-[10px] text-emerald-800 font-semibold uppercase tracking-wide mb-1">Fix #{fix.version}</p>
+              <p className="text-[11px] font-medium">{fix.hook}</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">{fix.caption}</p>
+              <p className="text-[10px] text-primary mt-0.5">{fix.cta}</p>
+              <p className="text-[9px] text-muted-foreground italic mt-1.5">{fix.why}</p>
             </div>
           ))}</div>}
         </div>}
@@ -1034,51 +1029,51 @@ function AnalitikInline({ strategyId }: { strategyId: string | null }) {
 
       {/* Overview cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Card className="p-4"><p className="text-xs text-muted-foreground">Konten</p><p className="text-2xl font-bold">{totalPosts}</p></Card>
-        <Card className="p-4"><p className="text-xs text-muted-foreground">Likes</p><p className="text-2xl font-bold text-rose-500">{totals.likes}</p></Card>
-        <Card className="p-4"><p className="text-xs text-muted-foreground">Engagement Rate</p><p className="text-2xl font-bold text-primary">{er}{er !== "—" ? "%" : ""}</p></Card>
-        <Card className="p-4"><p className="text-xs text-muted-foreground">Konversi</p><p className="text-2xl font-bold text-emerald-500">{totals.conversions}</p></Card>
+        <Card className="p-4 border-border/40"><div className="flex items-center justify-between mb-1"><FileText className="h-3.5 w-3.5 text-muted-foreground" /><p className="text-[9px] text-muted-foreground uppercase tracking-wide">Konten</p></div><p className="text-2xl font-bold">{totalPosts}</p></Card>
+        <Card className="p-4 border-border/40"><div className="flex items-center justify-between mb-1"><Heart className="h-3.5 w-3.5 text-rose-400" /><p className="text-[9px] text-muted-foreground uppercase tracking-wide">Likes</p></div><p className="text-2xl font-bold">{totals.likes}</p></Card>
+        <Card className="p-4 border-border/40"><div className="flex items-center justify-between mb-1"><Activity className="h-3.5 w-3.5 text-primary" /><p className="text-[9px] text-muted-foreground uppercase tracking-wide">Eng Rate</p></div><p className="text-2xl font-bold">{er}{er !== "—" ? "%" : ""}</p></Card>
+        <Card className="p-4 border-border/40"><div className="flex items-center justify-between mb-1"><ShoppingCart className="h-3.5 w-3.5 text-emerald-400" /><p className="text-[9px] text-muted-foreground uppercase tracking-wide">Konversi</p></div><p className="text-2xl font-bold">{totals.conversions}</p></Card>
       </div>
 
       {/* Burnout */}
-      <Card className="p-4">
-        <p className="text-xs font-semibold mb-3">🚨 Burnout Monitor</p>
+      <Card className="p-4 border-border/40">
+        <div className="flex items-center gap-2 mb-3"><Activity className="h-4 w-4 text-rose-500" /><p className="text-xs font-semibold">Burnout Monitor</p></div>
         {burnoutAlerts.length > 0 ? <div className="space-y-2">
-          {burnoutAlerts.map((a, i) => <div key={i} className={`rounded-lg p-2.5 text-[11px] ${a.level === "danger" ? "bg-rose-50 text-rose-800" : "bg-amber-50 text-amber-800"}`}>{a.level === "danger" ? "🚨" : "⚠️"} {a.text}</div>)}
-        </div> : <div className="rounded-lg bg-emerald-50 p-2.5 text-[11px] text-emerald-800">✨ Frekuensi posting stabil. Pertahankan konsistensi.</div>}
-        <div className="flex justify-between text-[10px] text-muted-foreground pt-2"><span>7 hari ini: {last7.length} post</span><span>7 hari lalu: {prev7.length} post</span></div>
+          {burnoutAlerts.map((a, i) => <div key={i} className={`rounded-lg p-2.5 text-[11px] flex items-start gap-2 ${a.level === "danger" ? "bg-rose-50 text-rose-800" : "bg-amber-50 text-amber-800"}`}><span className="shrink-0">{a.level === "danger" ? "🚨" : "⚠️"}</span><span>{a.text}</span></div>)}
+        </div> : <div className="rounded-lg bg-emerald-50 p-2.5 text-[11px] text-emerald-800 flex items-center gap-2"><Check className="h-3.5 w-3.5" />Frekuensi posting stabil. Pertahankan konsistensi.</div>}
+        <div className="flex justify-between text-[10px] text-muted-foreground pt-3"><span>7 hari ini · {last7.length} post</span><span>7 hari lalu · {prev7.length} post</span></div>
       </Card>
 
       {/* Goal Tracking */}
-      <Card className="p-4">
-        <p className="text-xs font-semibold mb-3">🎯 Goal Tracking</p>
+      <Card className="p-4 border-border/40">
+        <div className="flex items-center gap-2 mb-3"><Target className="h-4 w-4 text-primary" /><p className="text-xs font-semibold">Goal Tracking</p></div>
         <div className="grid grid-cols-2 gap-2 mb-3">
-          <div><p className="text-[10px] text-muted-foreground">Follower sekarang</p><Input type="number" value={currentFollowers} onChange={e => saveGoal(followerGoal, parseInt(e.target.value) || 0)} className="h-8 text-xs" /></div>
-          <div><p className="text-[10px] text-muted-foreground">Target follower</p><Input type="number" value={followerGoal} onChange={e => saveGoal(parseInt(e.target.value) || 0, currentFollowers)} className="h-8 text-xs" /></div>
+          <div><p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">Sekarang</p><Input type="number" value={currentFollowers} onChange={e => saveGoal(followerGoal, parseInt(e.target.value) || 0)} className="h-8 text-xs" /></div>
+          <div><p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">Target</p><Input type="number" value={followerGoal} onChange={e => saveGoal(parseInt(e.target.value) || 0, currentFollowers)} className="h-8 text-xs" /></div>
         </div>
-        <div className="h-3 rounded-full bg-muted overflow-hidden mb-2">
+        <div className="h-2 rounded-full bg-muted overflow-hidden mb-2">
           <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${Math.min(100, followerGoal > 0 ? (currentFollowers / followerGoal) * 100 : 0)}%` }} />
         </div>
-        <div className="flex justify-between text-[10px] text-muted-foreground mb-2"><span>{currentFollowers}</span><span>{followerGoal > 0 ? Math.round((currentFollowers / followerGoal) * 100) : 0}%</span><span>{followerGoal}</span></div>
-        <div className={`rounded-lg p-2.5 text-[11px] ${onTrack && estGrowth > 0 ? "bg-emerald-50 text-emerald-800" : "bg-amber-50 text-amber-800"}`}>
-          {estGrowth > 0 ? <>{onTrack ? "🚀" : "⚡"} Proyeksi akhir bulan: <strong>{projectedAtMonth}</strong> follower.{!onTrack && ` Tingkatkan posting rate.`}</> : "📊 Catat reach di setiap konten untuk dapat proyeksi AI."}
+        <div className="flex justify-between text-[10px] text-muted-foreground mb-3"><span>{currentFollowers}</span><span className="font-semibold text-foreground">{followerGoal > 0 ? Math.round((currentFollowers / followerGoal) * 100) : 0}%</span><span>{followerGoal}</span></div>
+        <div className={`rounded-lg p-2.5 text-[11px] flex items-start gap-2 ${onTrack && estGrowth > 0 ? "bg-emerald-50 text-emerald-800" : "bg-amber-50 text-amber-800"}`}>
+          {estGrowth > 0 ? <><TrendingUp className="h-3.5 w-3.5 shrink-0 mt-0.5" /><span>Proyeksi akhir bulan: <strong>{projectedAtMonth}</strong> follower.{!onTrack && ` Tingkatkan posting rate.`}</span></> : <><BarChart3 className="h-3.5 w-3.5 shrink-0 mt-0.5" /><span>Catat reach di setiap konten untuk dapat proyeksi AI.</span></>}
         </div>
       </Card>
 
       {/* Funnel */}
-      <Card className="p-4">
-        <p className="text-xs font-semibold mb-3">⚡ Conversion Funnel</p>
+      <Card className="p-4 border-border/40">
+        <div className="flex items-center gap-2 mb-3"><Zap className="h-4 w-4 text-amber-500" /><p className="text-xs font-semibold">Conversion Funnel</p></div>
         {totals.reach > 0 ? <div className="space-y-2">
           {funnel.map((f, i) => <div key={f.stage} className="flex items-center gap-3">
-            <span className="text-xs w-20 shrink-0">{f.stage}</span>
+            <span className="text-xs w-20 shrink-0 text-muted-foreground">{f.stage}</span>
             <div className="flex-1 h-7 rounded-md bg-muted/40 overflow-hidden">
               <div className="h-full rounded-md flex items-center justify-end pr-2" style={{ width: `${Math.max(i === 0 ? 100 : f.pct, 5)}%`, background: COLORS[i] }}><span className="text-[10px] text-white font-bold">{(f.value || 0).toLocaleString()}</span></div>
             </div>
-            <span className="text-[10px] text-muted-foreground w-12 text-right">{f.pct.toFixed(1)}%</span>
+            <span className="text-[10px] text-muted-foreground w-12 text-right tabular-nums">{f.pct.toFixed(1)}%</span>
           </div>)}
-        </div> : <div className="space-y-2 opacity-40">
+        </div> : <div className="space-y-2 opacity-30">
           {["Reach", "Engagement", "DM", "Konversi"].map((s, i) => <div key={s} className="flex items-center gap-3">
-            <span className="text-xs w-20 shrink-0">{s}</span>
+            <span className="text-xs w-20 shrink-0 text-muted-foreground">{s}</span>
             <div className="flex-1 h-7 rounded-md bg-muted/40 overflow-hidden"><div className="h-full rounded-md" style={{ width: `${100 - i * 25}%`, background: COLORS[i] }} /></div>
             <span className="text-[10px] text-muted-foreground w-12 text-right">—</span>
           </div>)}
@@ -1087,49 +1082,49 @@ function AnalitikInline({ strategyId }: { strategyId: string | null }) {
       </Card>
 
       {/* Cohort */}
-      <Card className="p-4">
-        <p className="text-xs font-semibold mb-3">📊 Cohort: Engagement per Minggu</p>
+      <Card className="p-4 border-border/40">
+        <div className="flex items-center gap-2 mb-3"><BarChart3 className="h-4 w-4 text-violet-500" /><p className="text-xs font-semibold">Engagement per Minggu</p></div>
         {cohort.length >= 2 ? <div className="space-y-1.5">
           {cohort.map(c => { const maxEng = Math.max(...cohort.map(x => x.avgEng), 1); return <div key={c.week} className="flex items-center gap-3">
-            <span className="text-xs w-10">{c.week}</span>
+            <span className="text-xs w-10 text-muted-foreground">{c.week}</span>
             <div className="flex-1 h-5 rounded bg-muted/40 overflow-hidden"><div className="h-full bg-violet-500" style={{ width: `${Math.min(100, maxEng > 0 ? (c.avgEng / maxEng) * 100 : 0)}%` }} /></div>
-            <span className="text-[10px] text-muted-foreground w-12 text-right">{c.avgEng}</span>
+            <span className="text-[10px] text-muted-foreground w-12 text-right tabular-nums">{c.avgEng}</span>
           </div>; })}
         </div> : <p className="text-[11px] text-muted-foreground italic">Butuh minimal 2 minggu data untuk lihat pattern growth/decay.</p>}
       </Card>
 
       {/* Attribution */}
-      <Card className="p-4">
-        <p className="text-xs font-semibold mb-3">🏆 Top Konversi (Business Outcome)</p>
+      <Card className="p-4 border-border/40">
+        <div className="flex items-center gap-2 mb-3"><Award className="h-4 w-4 text-emerald-500" /><p className="text-xs font-semibold">Top Konversi</p></div>
         {attribution.length > 0 ? <div className="space-y-2">
           {attribution.map((a: any, i) => <div key={i} className="rounded-lg bg-emerald-50/40 p-2.5">
             <div className="flex items-center justify-between mb-1">
-              <Badge variant="secondary" className="text-[9px]">{a.post?.format || "—"}</Badge>
+              <Badge variant="secondary" className="text-[9px] font-normal">{a.post?.format || "—"}</Badge>
               <span className="text-[10px] text-muted-foreground capitalize">{a.platform} · W{a.week_number}</span>
             </div>
-            {a.post?.hook && <p className="text-[11px] line-clamp-1 mb-1">🪝 {a.post.hook}</p>}
-            <div className="flex gap-3 text-[10px]"><span className="text-emerald-700 font-bold">🛒 {a.conversions}</span><span className="text-blue-700">📩 {a.messages}</span><span className="text-muted-foreground">❤️ {a.likes}</span></div>
+            {a.post?.hook && <p className="text-[11px] line-clamp-1 mb-1.5">{a.post.hook}</p>}
+            <div className="flex gap-3 text-[10px]"><span className="text-emerald-700 font-semibold flex items-center gap-1"><ShoppingCart className="h-3 w-3" />{a.conversions}</span><span className="text-blue-600 flex items-center gap-1"><Send className="h-3 w-3" />{a.messages}</span><span className="text-muted-foreground flex items-center gap-1"><Heart className="h-3 w-3" />{a.likes}</span></div>
           </div>)}
         </div> : <p className="text-[11px] text-muted-foreground italic">Catat konversi & DM di tracker untuk lihat konten mana yang menghasilkan business outcome.</p>}
       </Card>
 
       {/* Content Type ROI */}
-      <Card className="p-4">
-        <p className="text-xs font-semibold mb-3">💰 Content Type ROI</p>
+      <Card className="p-4 border-border/40">
+        <div className="flex items-center gap-2 mb-3"><TrendingUp className="h-4 w-4 text-amber-500" /><p className="text-xs font-semibold">Content Type ROI</p></div>
         {contentROI.length > 0 ? <div className="space-y-2">
-          {contentROI.slice(0, 5).map((c, i) => <div key={c.format} className="rounded-lg bg-white p-2.5 border">
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-xs font-medium capitalize">{c.format}</span>
-              <Badge className={i === 0 ? "bg-amber-500" : "bg-muted text-muted-foreground"}>{i === 0 ? "🏆 Best" : `#${i + 1}`}</Badge>
+          {contentROI.slice(0, 5).map((c, i) => <div key={c.format} className="rounded-lg bg-muted/30 p-2.5 flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <span className={`text-xs font-semibold w-5 ${i === 0 ? "text-amber-500" : "text-muted-foreground"}`}>#{i + 1}</span>
+              <div><p className="text-xs font-medium capitalize">{c.format}</p><p className="text-[10px] text-muted-foreground">{c.count} posts</p></div>
             </div>
-            <div className="flex justify-between text-[10px]"><span className="text-muted-foreground">{c.count} posts</span><span className="font-bold text-primary">ROI: {c.roiScore}</span></div>
+            <div className="text-right"><p className="text-sm font-bold text-primary">{c.roiScore}</p><p className="text-[9px] text-muted-foreground">ROI</p></div>
           </div>)}
-          {contentROI[0] && contentROI.length > 1 && <p className="text-[10px] text-muted-foreground mt-2 italic">💡 Format <strong>{contentROI[0].format}</strong> paling efektif. Perbanyak.</p>}
+          {contentROI[0] && contentROI.length > 1 && <p className="text-[10px] text-muted-foreground mt-2 italic flex items-start gap-1.5"><Lightbulb className="h-3 w-3 shrink-0 mt-0.5" />Format <strong className="text-foreground">{contentROI[0].format}</strong> paling efektif.</p>}
         </div> : <p className="text-[11px] text-muted-foreground italic">Generate strategi & catat performa untuk lihat format mana yang paling ROI tinggi.</p>}
       </Card>
 
       <div className="text-center pt-2">
-        <a href="/analytics" className="text-xs text-primary font-medium">Lihat analitik lengkap →</a>
+        <a href="/analytics" className="text-xs text-primary font-medium hover:underline inline-flex items-center gap-1">Lihat analitik lengkap <ChevronRight className="h-3 w-3" /></a>
       </div>
     </div>
   );
