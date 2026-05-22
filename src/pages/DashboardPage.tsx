@@ -719,6 +719,47 @@ function InsightView({ feedback, weekData, niche, platform }: { feedback: Feedba
         </div>}
       </Card>
 
+      {/* Worst Content - top 10 lowest performing */}
+      {(() => {
+        const postList: { hook: string; format: string; score: number; likes: number; comments: number; conversions: number; platform: string; week: number }[] = [];
+        feedback.forEach((f: any) => {
+          if ((f.likes || 0) + (f.comments || 0) + (f.messages || 0) + (f.conversions || 0) === 0) return;
+          // Find matching post from weekData
+          let hook = ""; let format = "";
+          weekData.forEach((w: any) => (w?.days || []).forEach((d: any) => (d?.posts || []).forEach((p: any) => {
+            if (!hook && d.day === f.day && p.slot === f.slot) { hook = p.hook || ""; format = p.format || ""; }
+          })));
+          const score = (f.conversions || 0) * 5 + (f.messages || 0) * 2 + (f.comments || 0) * 1.5 + (f.likes || 0) * 0.1;
+          postList.push({ hook, format, score, likes: f.likes || 0, comments: f.comments || 0, conversions: f.conversions || 0, platform: f.platform || "", week: f.week_number || 0 });
+        });
+        const worst = postList.sort((a, b) => a.score - b.score).slice(0, 10);
+        if (worst.length === 0) return null;
+        return (
+          <Card className="p-4">
+            <p className="text-xs font-semibold mb-3">⚠️ Konten Terburuk (Top 10)</p>
+            <div className="space-y-2">
+              {worst.map((w, i) => (
+                <div key={i} className="rounded-lg bg-rose-50/50 p-2.5">
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-rose-500 font-bold">#{i + 1}</span>
+                      {w.format && <Badge variant="secondary" className="text-[8px]">{w.format}</Badge>}
+                    </div>
+                    <span className="text-[9px] text-muted-foreground capitalize">{w.platform} · W{w.week}</span>
+                  </div>
+                  {w.hook && <p className="text-[10px] line-clamp-1">🪝 {w.hook}</p>}
+                  <div className="flex gap-3 text-[9px] text-muted-foreground mt-1">
+                    <span>❤️ {w.likes}</span><span>💬 {w.comments}</span><span>🛒 {w.conversions}</span>
+                    <span className="text-rose-500 font-bold ml-auto">Score: {w.score.toFixed(0)}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <p className="text-[9px] text-muted-foreground italic mt-2">Score = konversi×5 + DM×2 + komentar×1.5 + likes×0.1</p>
+          </Card>
+        );
+      })()}
+
       {/* Recommendations */}
       <Card className="p-4 space-y-2">
         <p className="text-xs font-semibold uppercase text-muted-foreground mb-2">🧠 Rekomendasi AI</p>
