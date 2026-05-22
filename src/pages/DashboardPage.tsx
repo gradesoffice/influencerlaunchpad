@@ -562,7 +562,6 @@ function KPIBar({ label, current, target }: { label: string; current: number; ta
 function InsightView({ feedback, weekData, niche, platform }: { feedback: Feedback[]; weeks: Record<number, WeekPlan>; weekData: WeekPlan[]; niche: string; platform: string }) {
   const [trends, setTrends] = useState<any>(null);
   const [loadingTrends, setLoadingTrends] = useState(false);
-  const [doctorInput, setDoctorInput] = useState("");
   const [doctorResult, setDoctorResult] = useState<any>(null);
   const [loadingDoctor, setLoadingDoctor] = useState(false);
 
@@ -581,11 +580,22 @@ function InsightView({ feedback, weekData, niche, platform }: { feedback: Feedba
   };
 
   const runDoctor = async () => {
-    if (!doctorInput.trim()) { toast.error("Paste caption dulu"); return; }
+    // Auto-grab worst content from feedback data
+    const postList: { hook: string; caption: string; format: string; score: number; platform: string }[] = [];
+    weekData.forEach((w: any) => (w?.days || []).forEach((d: any) => (d?.posts || []).forEach((p: any) => {
+      const matchFb = feedback.find((f: any) => f.day === d.day && f.slot === p.slot);
+      if (matchFb) {
+        const score = (matchFb.conversions || 0) * 5 + (matchFb.messages || 0) * 2 + (matchFb.comments || 0) * 1.5 + (matchFb.likes || 0) * 0.1;
+        postList.push({ hook: p.hook || "", caption: p.caption || "", format: p.format || "", score, platform: (matchFb as any).platform || platform });
+      }
+    })));
+    const worst = postList.sort((a, b) => a.score - b.score)[0];
+    const captionToAnalyze = worst ? `${worst.hook} ${worst.caption}` : "";
+    if (!captionToAnalyze) { toast.error("Belum ada data feedback untuk dianalisis"); return; }
     setLoadingDoctor(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch("/api/content-doctor", { method: "POST", headers: { "Content-Type": "application/json", ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}) }, body: JSON.stringify({ caption: doctorInput, platform, niche }) });
+      const res = await fetch("/api/content-doctor", { method: "POST", headers: { "Content-Type": "application/json", ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}) }, body: JSON.stringify({ caption: captionToAnalyze, platform: worst?.platform || platform, niche, metrics: `likes:${Math.round(worst?.score || 0)}` }) });
       if (res.ok) { setDoctorResult(await res.json()); }
       else { const e = await res.json().catch(() => null); toast.error(e?.error || "Gagal"); }
     } catch { toast.error("Gagal"); } finally { setLoadingDoctor(false); }
@@ -700,11 +710,12 @@ function InsightView({ feedback, weekData, niche, platform }: { feedback: Feedba
 
       {/* AI Content Doctor */}
       <Card className="p-4">
-        <p className="text-xs font-semibold mb-3">🩺 Content Doctor</p>
-        <p className="text-[10px] text-muted-foreground mb-2">Paste caption yang underperform, AI diagnosa kenapa flop & kasih fix.</p>
-        <Textarea value={doctorInput} onChange={e => setDoctorInput(e.target.value)} placeholder="Paste caption yang performanya jelek di sini..." rows={3} className="text-xs mb-2" />
-        <Button variant="outline" size="sm" className="h-8 text-xs w-full" onClick={runDoctor} disabled={loadingDoctor}>{loadingDoctor ? <Loader2 className="h-3 w-3 animate-spin mr-2" /> : "🔍"} Diagnosa</Button>
-        {doctorResult && <div className="mt-3 space-y-2">
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-xs font-semibold">🩺 Content Doctor</p>
+          <Button variant="outline" size="sm" className="h-7 text-[10px]" onClick={runDoctor} disabled={loadingDoctor}>{loadingDoctor ? <Loader2 className="h-3 w-3 animate-spin" /> : "Diagnosa"}</Button>
+        </div>
+        <p className="text-[10px] text-muted-foreground mb-2">AI analisis konten terburuk-mu & kasih fix otomatis.</p>
+        {doctorResult && <div className="space-y-2">
           <div className="rounded-lg bg-rose-50 p-2.5"><p className="text-[11px] text-rose-800 font-semibold">Diagnosis:</p><p className="text-[10px] text-rose-700">{doctorResult.diagnosis}</p></div>
           {doctorResult.issues?.length > 0 && <div className="rounded-lg bg-amber-50 p-2.5"><p className="text-[11px] text-amber-800 font-semibold">Issues:</p>{doctorResult.issues.map((iss: string, i: number) => <p key={i} className="text-[10px] text-amber-700">• {iss}</p>)}</div>}
           {doctorResult.fixes?.length > 0 && <div className="space-y-2">{doctorResult.fixes.map((fix: any, i: number) => (
@@ -717,6 +728,7 @@ function InsightView({ feedback, weekData, niche, platform }: { feedback: Feedba
             </div>
           ))}</div>}
         </div>}
+        {!doctorResult && !loadingDoctor && <p className="text-[10px] text-muted-foreground italic">Klik Diagnosa untuk AI analisis konten terburuk-mu.</p>}
       </Card>
 
       {/* Worst Content - top 10 lowest performing */}
