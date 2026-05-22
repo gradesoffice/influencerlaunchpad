@@ -870,20 +870,29 @@ function RoadmapView({ strategy, weeks, completedWeeks, totalWeeksAvailable }: {
 
 function AnalitikInline({ strategyId }: { strategyId: string | null }) {
   const [loading, setLoading] = useState(true);
-  const [weekData, setWeekData] = useState<WeekPlan[]>([]);
-  const [feedbackData, setFeedbackData] = useState<Feedback[]>([]);
-  const [followerGoal, setFollowerGoal] = useState<number>(() => parseInt(localStorage.getItem("ila_follower_goal") || "1000"));
-  const [currentFollowers, setCurrentFollowers] = useState<number>(() => parseInt(localStorage.getItem("ila_current_followers") || "0"));
+  const [weekData, setWeekData] = useState<any[]>([]);
+  const [feedbackData, setFeedbackData] = useState<any[]>([]);
+  const [followerGoal, setFollowerGoal] = useState<number>(1000);
+  const [currentFollowers, setCurrentFollowers] = useState<number>(0);
+
+  useEffect(() => {
+    try {
+      setFollowerGoal(parseInt(localStorage.getItem("ila_follower_goal") || "1000"));
+      setCurrentFollowers(parseInt(localStorage.getItem("ila_current_followers") || "0"));
+    } catch {}
+  }, []);
 
   useEffect(() => {
     if (!strategyId) { setLoading(false); return; }
     (async () => {
-      const [{ data: w }, { data: f }] = await Promise.all([
-        supabase.from("weeks").select("week_number, data").eq("strategy_id", strategyId).order("week_number"),
-        supabase.from("feedback").select("week_number, day, slot, likes, comments, messages, conversions, reach, posted_at, platform, note").eq("strategy_id", strategyId),
-      ]);
-      setWeekData((w ?? []).map((x: any) => x.data));
-      setFeedbackData((f ?? []) as any);
+      try {
+        const [{ data: w }, { data: f }] = await Promise.all([
+          supabase.from("weeks").select("week_number, data").eq("strategy_id", strategyId).order("week_number"),
+          (supabase.from("feedback") as any).select("week_number, day, slot, likes, comments, messages, conversions, reach, posted_at, platform, note").eq("strategy_id", strategyId),
+        ]);
+        setWeekData((w ?? []).map((x: any) => x.data));
+        setFeedbackData((f ?? []) as any[]);
+      } catch (e) { console.error("AnalitikInline load error:", e); }
       setLoading(false);
     })();
   }, [strategyId]);
@@ -897,8 +906,8 @@ function AnalitikInline({ strategyId }: { strategyId: string | null }) {
   if (loading) return <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>;
 
   // Totals
-  const totals = feedbackData.reduce((a: any, f: any) => ({ posts: a.posts + 1, likes: a.likes + f.likes, comments: a.comments + f.comments, messages: a.messages + f.messages, conversions: a.conversions + f.conversions, reach: a.reach + (f.reach || 0) }), { posts: 0, likes: 0, comments: 0, messages: 0, conversions: 0, reach: 0 });
-  const totalPosts = weekData.reduce((s, w: any) => s + ((w?.days || []).reduce((a: number, d: any) => a + ((d?.posts || []).length), 0)), 0);
+  const totals = feedbackData.reduce((a: any, f: any) => ({ posts: a.posts + 1, likes: a.likes + (f.likes || 0), comments: a.comments + (f.comments || 0), messages: a.messages + (f.messages || 0), conversions: a.conversions + (f.conversions || 0), reach: a.reach + (f.reach || 0) }), { posts: 0, likes: 0, comments: 0, messages: 0, conversions: 0, reach: 0 });
+  const totalPosts = weekData.reduce((s: number, w: any) => s + ((w?.days || []).reduce((a: number, d: any) => a + ((d?.posts || []).length), 0)), 0);
   const totalEng = totals.likes + totals.comments + totals.messages;
   const er = totals.reach > 0 ? ((totalEng / totals.reach) * 100).toFixed(1) : "—";
   const cr = totals.reach > 0 ? ((totals.conversions / totals.reach) * 100).toFixed(2) : "—";
@@ -1010,7 +1019,7 @@ function AnalitikInline({ strategyId }: { strategyId: string | null }) {
           {funnel.map((f, i) => <div key={f.stage} className="flex items-center gap-3">
             <span className="text-xs w-20 shrink-0">{f.stage}</span>
             <div className="flex-1 h-7 rounded-md bg-muted/40 overflow-hidden">
-              <div className="h-full rounded-md flex items-center justify-end pr-2" style={{ width: `${Math.max(i === 0 ? 100 : f.pct, 5)}%`, background: COLORS[i] }}><span className="text-[10px] text-white font-bold">{f.value.toLocaleString()}</span></div>
+              <div className="h-full rounded-md flex items-center justify-end pr-2" style={{ width: `${Math.max(i === 0 ? 100 : f.pct, 5)}%`, background: COLORS[i] }}><span className="text-[10px] text-white font-bold">{(f.value || 0).toLocaleString()}</span></div>
             </div>
             <span className="text-[10px] text-muted-foreground w-12 text-right">{f.pct.toFixed(1)}%</span>
           </div>)}
@@ -1028,11 +1037,11 @@ function AnalitikInline({ strategyId }: { strategyId: string | null }) {
       <Card className="p-4">
         <p className="text-xs font-semibold mb-3">📊 Cohort: Engagement per Minggu</p>
         {cohort.length >= 2 ? <div className="space-y-1.5">
-          {cohort.map(c => <div key={c.week} className="flex items-center gap-3">
+          {cohort.map(c => { const maxEng = Math.max(...cohort.map(x => x.avgEng), 1); return <div key={c.week} className="flex items-center gap-3">
             <span className="text-xs w-10">{c.week}</span>
-            <div className="flex-1 h-5 rounded bg-muted/40 overflow-hidden"><div className="h-full bg-violet-500" style={{ width: `${Math.min(100, (c.avgEng / Math.max(...cohort.map(x => x.avgEng), 1)) * 100)}%` }} /></div>
+            <div className="flex-1 h-5 rounded bg-muted/40 overflow-hidden"><div className="h-full bg-violet-500" style={{ width: `${Math.min(100, maxEng > 0 ? (c.avgEng / maxEng) * 100 : 0)}%` }} /></div>
             <span className="text-[10px] text-muted-foreground w-12 text-right">{c.avgEng}</span>
-          </div>)}
+          </div>; })}
         </div> : <p className="text-[11px] text-muted-foreground italic">Butuh minimal 2 minggu data untuk lihat pattern growth/decay.</p>}
       </Card>
 
