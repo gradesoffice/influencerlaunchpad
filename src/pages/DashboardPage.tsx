@@ -536,91 +536,26 @@ function AudiensView({ niche, audience, platform, userPlan, weeks }: { niche: st
     if (!imagePreview || !selectedHook) { toast.error("Upload foto & pilih hook dulu"); return; }
     setLoading(true); setOutputImage(null);
     try {
-      // Render image with hook overlay using Canvas (instant, client-side)
-      const canvas = document.createElement("canvas");
-      const ctx = canvas.getContext("2d")!;
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-      
-      await new Promise<void>((resolve, reject) => {
-        img.onload = () => resolve();
-        img.onerror = () => reject(new Error("Gagal load gambar"));
-        img.src = imagePreview!;
-      });
-
-      // IG Story ratio 1080x1920
-      canvas.width = 1080;
-      canvas.height = 1920;
-
-      // Draw image (cover fit)
-      const scale = Math.max(canvas.width / img.width, canvas.height / img.height);
-      const x = (canvas.width - img.width * scale) / 2;
-      const y = (canvas.height - img.height * scale) / 2;
-      ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
-
-      // Darken overlay for text readability
-      ctx.fillStyle = "rgba(0,0,0,0.3)";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      // Gradient at bottom
-      const grad = ctx.createLinearGradient(0, canvas.height * 0.6, 0, canvas.height);
-      grad.addColorStop(0, "rgba(0,0,0,0)");
-      grad.addColorStop(1, "rgba(0,0,0,0.7)");
-      ctx.fillStyle = grad;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      // Hook text
-      ctx.textAlign = "center";
-      ctx.fillStyle = "#ffffff";
-      ctx.shadowColor = "rgba(0,0,0,0.8)";
-      ctx.shadowBlur = 20;
-      ctx.shadowOffsetX = 0;
-      ctx.shadowOffsetY = 4;
-
-      // Auto-size font
-      const maxWidth = canvas.width - 120;
-      let fontSize = 72;
-      ctx.font = `bold ${fontSize}px -apple-system, BlinkMacSystemFont, sans-serif`;
-      while (ctx.measureText(selectedHook).width > maxWidth && fontSize > 36) {
-        fontSize -= 4;
-        ctx.font = `bold ${fontSize}px -apple-system, BlinkMacSystemFont, sans-serif`;
-      }
-
-      // Word wrap
-      const words = selectedHook.split(" ");
-      const lines: string[] = [];
-      let currentLine = "";
-      for (const word of words) {
-        const test = currentLine ? `${currentLine} ${word}` : word;
-        if (ctx.measureText(test).width > maxWidth) { lines.push(currentLine); currentLine = word; }
-        else { currentLine = test; }
-      }
-      if (currentLine) lines.push(currentLine);
-
-      // Draw lines centered vertically
-      const lineHeight = fontSize * 1.3;
-      const totalHeight = lines.length * lineHeight;
-      const startY = (canvas.height - totalHeight) / 2 + fontSize;
-      lines.forEach((line, i) => { ctx.fillText(line, canvas.width / 2, startY + i * lineHeight); });
-
-      // Reset shadow
-      ctx.shadowBlur = 0;
-      ctx.shadowOffsetY = 0;
-
-      const result = canvas.toDataURL("image/png");
-      setOutputImage(result);
-      setUsedToday(prev => prev + 1);
-      toast.success("Konten siap download!");
-
-      // Log usage to backend (fire and forget)
       const { data: { session } } = await supabase.auth.getSession();
-      fetch("/api/image-enhance", {
+      const res = await fetch("/api/image-enhance", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}) },
-        body: JSON.stringify({ hook: selectedHook, imageBase64: "logged", style: "canvas" }),
-      }).catch(() => {});
-
-    } catch (e) { toast.error(e instanceof Error ? e.message : "Gagal generate"); }
+        body: JSON.stringify({ hook: selectedHook, imageBase64: imagePreview }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.image) {
+          setOutputImage(data.image);
+          setUsedToday(data.usedToday || 0);
+          toast.success("Konten siap download!");
+        } else {
+          toast.error("AI tidak menghasilkan gambar. Coba lagi.");
+        }
+      } else {
+        const err = await res.json().catch(() => null);
+        toast.error(err?.error || "Gagal generate");
+      }
+    } catch { toast.error("Gagal, coba lagi"); }
     setLoading(false);
   };
 
