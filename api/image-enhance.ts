@@ -25,12 +25,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Check daily limit (3 free/day)
     const today = new Date(); today.setHours(0, 0, 0, 0);
     const { count: todayCount } = await db.from('usage_logs').select('*', { count: 'exact', head: true }).eq('user_id', user.id).eq('action', 'image_enhance').gte('created_at', today.toISOString());
-    
     const freeDaily = 3;
     const usedToday = todayCount ?? 0;
 
     if (usedToday >= freeDaily) {
-      // Check if user has credits
       const { data: creditRow } = await (db.from('image_credits') as any).select('credits').eq('user_id', user.id).single();
       const credits = creditRow?.credits ?? 0;
       if (credits <= 0) {
@@ -39,71 +37,43 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       await (db.from('image_credits') as any).update({ credits: credits - 1 }).eq('user_id', user.id);
     }
 
-    const { hook, imageBase64, style } = req.body;
+    const { hook, imageBase64 } = req.body;
     if (!hook || !imageBase64) return res.status(400).json({ error: 'Hook dan gambar diperlukan' });
+    if (imageBase64 === 'logged') {
+      await db.from('usage_logs').insert({ user_id: user.id, action: 'image_enhance' });
+      return res.status(200).json({ success: true, usedToday: usedToday + 1, freeDaily });
+    }
 
-    const apiKey = process.env.AI_GATEWAY_API_KEY!;
-    const baseURL = process.env.AI_GATEWAY_BASE_URL || 'https://openrouter.ai/api/v1';
+    const openaiKey = process.env.OPENAI_API_KEY;
+    if (!openaiKey) return res.status(500).json({ error: 'OpenAI API key not configured. Tambahkan OPENAI_API_KEY di Vercel env.' });
 
-    // Use Gemini 2.0 Flash (supports image output via OpenRouter)
-    const response = await fetch(`${baseURL}/chat/completions`, {
+    // Use DALL-E 3 to generate aesthetic IG story with hook
+    const dalleRes = await fetch('https://api.openai.com/v1/images/generations', {
       method: 'POST',
-      headers: { 
-        'Authorization': `Bearer ${apiKey}`, 
-        'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://mibu27-influencerlaunchpad.vercel.app',
-        'X-Title': 'Influencer Launchpad'
-      },
+      headers: { 'Authorization': `Bearer ${openaiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'google/gemini-2.0-flash-exp:free',
-        messages: [
-          {
-            role: 'user',
-            content: [
-              {
-                type: 'image_url',
-                image_url: { url: imageBase64.startsWith('data:') ? imageBase64 : `data:image/jpeg;base64,${imageBase64}` }
-              },
-              {
-                type: 'text',
-                text: `You are a professional social media content designer. Take this photo and describe how to create a stunning Instagram story from it. Include: 1) Color grading suggestions 2) Where to place the hook text "${hook}" 3) Font style recommendation 4) Overall composition. Then provide the final hook text formatted for overlay: "${hook}". Respond in JSON: {"design":{"colorGrade":"","textPlacement":"","fontStyle":"","composition":""},"hookText":"${hook}","caption":"A ready-to-post description"}`
-              }
-            ]
-          }
-        ],
-        max_tokens: 1000,
-        response_format: { type: 'json_object' },
+        model: 'dall-e-3',
+        prompt: `Create a stunning, professional Instagram story image (portrait orientation). Design a beautiful social media content piece with bold, modern typography displaying this hook text: "${hook}". Style: aesthetic, clean gradients, modern design, eye-catching colors. The text "${hook}" must be the focal point - large, bold, readable. Add subtle decorative elements. Make it look like premium social media content from a top influencer. No faces, no photos - pure graphic design with text.`,
+        n: 1,
+        size: '1024x1792',
+        quality: 'standard',
       }),
     });
 
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({ error: { message: 'Unknown API error' } }));
-      console.error('[image-enhance] API error:', JSON.stringify(err));
-      return res.status(400).json({ error: err?.error?.message || 'Gagal generate. Coba lagi.' });
+    if (!dalleRes.ok) {
+      const err = await dalleRes.json().catch(() => null);
+      console.error('[image-enhance] DALL-E error:', JSON.stringify(err));
+      return res.status(400).json({ error: err?.error?.message || 'Gagal generate gambar. Coba lagi.' });
     }
 
-    const data = await response.json();
-    const content = data.choices?.[0]?.message?.content;
-    
-    let designResult = null;
-    try {
-      designResult = typeof content === 'string' ? JSON.parse(content) : content;
-    } catch {
-      designResult = { design: { colorGrade: 'warm tones', textPlacement: 'center', fontStyle: 'bold sans-serif', composition: 'full bleed with text overlay' }, hookText: hook, caption: content || '' };
-    }
+    const dalleData = await dalleRes.json();
+    const imageUrl = dalleData.data?.[0]?.url;
+    if (!imageUrl) return res.status(400).json({ error: 'Tidak ada gambar dihasilkan' });
 
     // Log usage
     await db.from('usage_logs').insert({ user_id: user.id, action: 'image_enhance' });
 
-    // Return design instructions + original image (client-side will render with Canvas)
-    return res.status(200).json({ 
-      design: designResult?.design || {},
-      hookText: hook,
-      originalImage: imageBase64,
-      usedToday: usedToday + 1, 
-      freeDaily,
-      success: true
-    });
+    return res.status(200).json({ image: imageUrl, usedToday: usedToday + 1, freeDaily });
   } catch (e) {
     console.error('[image-enhance]', e);
     return res.status(500).json({ error: e instanceof Error ? e.message : 'Internal error' });
