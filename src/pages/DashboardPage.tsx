@@ -40,6 +40,7 @@ export default function DashboardPage() {
   const [trialDaysLeft, setTrialDaysLeft] = useState(1);
   const [clickCount, setClickCount] = useState(0);
   const [showPaywall, setShowPaywall] = useState(false);
+  const [preSelectedHook, setPreSelectedHook] = useState("");
 
   useEffect(() => { loadFromDb(); }, []);
   const loadFromDb = async () => {
@@ -300,7 +301,7 @@ export default function DashboardPage() {
                           <div key={di}>
                             {d.posts.map((post, pi2) => {
                               const fkey = `${wn}|${d.day}|${post.slot}`;
-                              return <PostCard key={pi2} post={post} fkey={fkey} wn={wn} day={d.day} copiedKey={copiedKey} openFeedback={openFeedback} feedback={feedback} platforms={form.platforms} onCopy={copyPost} onFeedbackToggle={setOpenFeedback} onFeedbackUpdate={updateFeedback} />;
+                              return <PostCard key={pi2} post={post} fkey={fkey} wn={wn} day={d.day} copiedKey={copiedKey} openFeedback={openFeedback} feedback={feedback} platforms={form.platforms} onCopy={copyPost} onFeedbackToggle={setOpenFeedback} onFeedbackUpdate={updateFeedback} onProduction={(hook) => { setPreSelectedHook(hook); setActiveNav("audiens"); }} />;
                             })}
                           </div>
                         ))}
@@ -322,7 +323,7 @@ export default function DashboardPage() {
           </Card>}
 
           {/* AI Production Store (Business) */}
-          {activeNav === "audiens" && <AudiensView niche={form.niche} audience={form.audience} platform={form.platform} userPlan={userPlan} weeks={weeks} />}
+          {activeNav === "audiens" && <AudiensView niche={form.niche} audience={form.audience} platform={form.platform} userPlan={userPlan} weeks={weeks} preSelectedHook={preSelectedHook} />}
 
           {/* KPI Tracker View (Pro) */}
           {activeNav === "kpi" && <KPIView feedback={fbVals} totalWeeks={completedWeeks} />}
@@ -510,8 +511,9 @@ function PF({ text }: { text: string }) { return <div className="flex items-cent
 function PL({ text }: { text: string }) { return <div className="flex items-center gap-2 text-muted-foreground"><span className="h-3.5 w-3.5 shrink-0 text-center">—</span><span>{text}</span></div>; }
 
 // === PRO VIEWS ===
-function AudiensView({ niche, audience, platform, userPlan, weeks }: { niche: string; audience: string; platform: string; userPlan: string; weeks: Record<number, WeekPlan> }) {
-  const [selectedHook, setSelectedHook] = useState("");
+function AudiensView({ niche, audience, platform, userPlan, weeks, preSelectedHook }: { niche: string; audience: string; platform: string; userPlan: string; weeks: Record<number, WeekPlan>; preSelectedHook?: string }) {
+  const [selectedHook, setSelectedHook] = useState(preSelectedHook || "");
+  useEffect(() => { if (preSelectedHook) setSelectedHook(preSelectedHook); }, [preSelectedHook]);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [outputImage, setOutputImage] = useState<string | null>(null);
@@ -1323,12 +1325,13 @@ function AnalitikInline({ strategyId }: { strategyId: string | null }) {
 }
 
 
-function PostCard({ post, fkey, wn, day, copiedKey, openFeedback, feedback, platforms, onCopy, onFeedbackToggle, onFeedbackUpdate }: {
+function PostCard({ post, fkey, wn, day, copiedKey, openFeedback, feedback, platforms, onCopy, onFeedbackToggle, onFeedbackUpdate, onProduction }: {
   post: WeekPlan["days"][0]["posts"][0]; fkey: string; wn: number; day: number;
   copiedKey: string | null; openFeedback: string | null; feedback: Record<string, Feedback>; platforms: string[];
   onCopy: (key: string, post: WeekPlan["days"][0]["posts"][0]) => void;
   onFeedbackToggle: (key: string | null) => void;
   onFeedbackUpdate: (key: string, patch: Partial<Feedback>) => void;
+  onProduction?: (hook: string) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const isCopied = copiedKey === fkey;
@@ -1349,6 +1352,7 @@ function PostCard({ post, fkey, wn, day, copiedKey, openFeedback, feedback, plat
         <div className="flex gap-2 mt-3">
           <button onClick={(e) => { e.stopPropagation(); onCopy(fkey, post); }} className={`px-3 py-1.5 rounded-lg text-xs font-medium ${isCopied ? "bg-emerald-100 text-emerald-700" : "bg-primary/10 text-primary"}`}>{isCopied ? "✓ Copied" : "📋 Copy"}</button>
           <button onClick={(e) => { e.stopPropagation(); onFeedbackToggle(fbOpen ? null : fkey); }} className="px-3 py-1.5 rounded-lg text-xs font-medium bg-muted text-muted-foreground">📊 Track</button>
+          {onProduction && <button onClick={(e) => { e.stopPropagation(); onProduction(post.hook); }} className="px-3 py-1.5 rounded-lg text-xs font-medium bg-violet-100 text-violet-700">🎨 Buat</button>}
         </div>
         {fbOpen && <div className="mt-2 space-y-2">
           {platforms.map(plat => {
