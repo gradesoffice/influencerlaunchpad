@@ -36,7 +36,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (credits <= 0) {
         return res.status(403).json({ error: 'Kuota harian habis. Beli credit tambahan.', code: 'CREDIT_LIMIT', usedToday, freeDaily });
       }
-      // Deduct 1 credit
       await (db.from('image_credits') as any).update({ credits: credits - 1 }).eq('user_id', user.id);
     }
 
@@ -46,13 +45,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const apiKey = process.env.AI_GATEWAY_API_KEY!;
     const baseURL = process.env.AI_GATEWAY_BASE_URL || 'https://openrouter.ai/api/v1';
 
-    // Call Gemini 3.1 Flash Image via OpenRouter
+    // Use Gemini 2.0 Flash (supports image output via OpenRouter)
     const response = await fetch(`${baseURL}/chat/completions`, {
       method: 'POST',
-      headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      headers: { 
+        'Authorization': `Bearer ${apiKey}`, 
+        'Content-Type': 'application/json',
+        'HTTP-Referer': 'https://mibu27-influencerlaunchpad.vercel.app',
+        'X-Title': 'Influencer Launchpad'
+      },
       body: JSON.stringify({
-        model: 'google/gemini-3.1-flash-image-preview',
-        modalities: ['image', 'text'],
+        model: 'google/gemini-2.0-flash-exp:free',
         messages: [
           {
             role: 'user',
@@ -63,42 +66,44 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               },
               {
                 type: 'text',
-                text: `Edit this photo to make it look like a professional Instagram story post. Style: ${style || 'modern, clean, aesthetic'}. Add the following hook text as an overlay on the image in a visually appealing way (bold, readable, contrasting): "${hook}". Make it look like a high-quality social media content piece ready to post. Keep the original photo as the background but enhance it with professional editing (better colors, slight vignette, modern feel). The text should be prominent and eye-catching.`
+                text: `You are a professional social media content designer. Take this photo and describe how to create a stunning Instagram story from it. Include: 1) Color grading suggestions 2) Where to place the hook text "${hook}" 3) Font style recommendation 4) Overall composition. Then provide the final hook text formatted for overlay: "${hook}". Respond in JSON: {"design":{"colorGrade":"","textPlacement":"","fontStyle":"","composition":""},"hookText":"${hook}","caption":"A ready-to-post description"}`
               }
             ]
           }
         ],
-        max_tokens: 4096,
+        max_tokens: 1000,
+        response_format: { type: 'json_object' },
       }),
     });
 
     if (!response.ok) {
-      const err = await response.json().catch(() => null);
-      console.error('[image-enhance] API error:', err);
-      return res.status(400).json({ error: err?.error?.message || 'Gagal generate gambar' });
+      const err = await response.json().catch(() => ({ error: { message: 'Unknown API error' } }));
+      console.error('[image-enhance] API error:', JSON.stringify(err));
+      return res.status(400).json({ error: err?.error?.message || 'Gagal generate. Coba lagi.' });
     }
 
     const data = await response.json();
-    
-    // Extract image from response
     const content = data.choices?.[0]?.message?.content;
-    let outputImage = null;
-
-    if (Array.isArray(content)) {
-      const imgPart = content.find((c: any) => c.type === 'image_url');
-      if (imgPart) outputImage = imgPart.image_url?.url;
-    } else if (typeof content === 'string' && content.includes('data:image')) {
-      outputImage = content;
-    }
-
-    if (!outputImage) {
-      return res.status(400).json({ error: 'AI tidak menghasilkan gambar. Coba lagi.' });
+    
+    let designResult = null;
+    try {
+      designResult = typeof content === 'string' ? JSON.parse(content) : content;
+    } catch {
+      designResult = { design: { colorGrade: 'warm tones', textPlacement: 'center', fontStyle: 'bold sans-serif', composition: 'full bleed with text overlay' }, hookText: hook, caption: content || '' };
     }
 
     // Log usage
     await db.from('usage_logs').insert({ user_id: user.id, action: 'image_enhance' });
 
-    return res.status(200).json({ image: outputImage, usedToday: usedToday + 1, freeDaily });
+    // Return design instructions + original image (client-side will render with Canvas)
+    return res.status(200).json({ 
+      design: designResult?.design || {},
+      hookText: hook,
+      originalImage: imageBase64,
+      usedToday: usedToday + 1, 
+      freeDaily,
+      success: true
+    });
   } catch (e) {
     console.error('[image-enhance]', e);
     return res.status(500).json({ error: e instanceof Error ? e.message : 'Internal error' });
