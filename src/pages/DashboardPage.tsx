@@ -674,11 +674,11 @@ function AudiensView({ niche, audience, platform, userPlan, weeks }: { niche: st
         <p className="text-xs font-semibold mb-2">Credit Tambahan</p>
         <p className="text-[10px] text-muted-foreground mb-3">3 gambar/hari gratis. Butuh lebih? Beli credit:</p>
         <div className="grid grid-cols-3 gap-2">
-          <div className="rounded-lg border p-2.5 text-center"><p className="text-xs font-bold">10</p><p className="text-[9px] text-muted-foreground">gambar</p><p className="text-xs font-semibold text-primary mt-1">Rp 18rb</p></div>
-          <div className="rounded-lg border-2 border-primary p-2.5 text-center"><p className="text-xs font-bold">30</p><p className="text-[9px] text-muted-foreground">gambar</p><p className="text-xs font-semibold text-primary mt-1">Rp 39rb</p></div>
-          <div className="rounded-lg border p-2.5 text-center"><p className="text-xs font-bold">50</p><p className="text-[9px] text-muted-foreground">gambar</p><p className="text-xs font-semibold text-primary mt-1">Rp 59rb</p></div>
+          <a href="https://wa.me/6285656787625?text=Halo%20admin%2C%20saya%20mau%20beli%20credit%20AI%20Production%20Store%20paket%20Starter%20(10%20gambar%20Rp%2018.000)" target="_blank" rel="noopener noreferrer" className="rounded-lg border p-2.5 text-center hover:border-primary hover:shadow-sm transition cursor-pointer"><p className="text-xs font-bold">10</p><p className="text-[9px] text-muted-foreground">gambar</p><p className="text-xs font-semibold text-primary mt-1">Rp 18rb</p></a>
+          <a href="https://wa.me/6285656787625?text=Halo%20admin%2C%20saya%20mau%20beli%20credit%20AI%20Production%20Store%20paket%20Creator%20(30%20gambar%20Rp%2039.000)" target="_blank" rel="noopener noreferrer" className="rounded-lg border-2 border-primary p-2.5 text-center hover:shadow-md transition cursor-pointer"><p className="text-xs font-bold">30</p><p className="text-[9px] text-muted-foreground">gambar</p><p className="text-xs font-semibold text-primary mt-1">Rp 39rb</p></a>
+          <a href="https://wa.me/6285656787625?text=Halo%20admin%2C%20saya%20mau%20beli%20credit%20AI%20Production%20Store%20paket%20Power%20(50%20gambar%20Rp%2059.000)" target="_blank" rel="noopener noreferrer" className="rounded-lg border p-2.5 text-center hover:border-primary hover:shadow-sm transition cursor-pointer"><p className="text-xs font-bold">50</p><p className="text-[9px] text-muted-foreground">gambar</p><p className="text-xs font-semibold text-primary mt-1">Rp 59rb</p></a>
         </div>
-        <p className="text-[9px] text-muted-foreground italic mt-2 text-center">Hubungi admin WA untuk beli credit.</p>
+        <p className="text-[9px] text-muted-foreground italic mt-2 text-center">Klik paket → langsung ke WhatsApp admin.</p>
       </Card>
 
       {/* History */}
