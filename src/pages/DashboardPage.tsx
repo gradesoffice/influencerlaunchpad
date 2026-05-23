@@ -625,14 +625,28 @@ function AudiensView({ niche, audience, platform, userPlan, weeks }: { niche: st
         </Button>
       </Card>
 
+      {/* Loading state */}
+      {loading && (
+        <Card className="p-6 border-border/40 text-center">
+          <div className="flex flex-col items-center gap-3">
+            <div className="relative">
+              <div className="h-16 w-16 rounded-full border-4 border-primary/20 border-t-primary animate-spin" />
+              <Sparkles className="h-5 w-5 text-primary absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+            </div>
+            <p className="text-sm font-medium">AI sedang bikin konten cantik...</p>
+            <p className="text-[10px] text-muted-foreground">Biasanya 10-20 detik. Sabar ya ✨</p>
+          </div>
+        </Card>
+      )}
+
       {/* Output */}
-      {outputImage && (
+      {outputImage && !loading && (
         <Card className="p-4 border-border/40">
           <div className="flex items-center justify-between mb-3">
-            <p className="text-xs font-semibold">Hasil</p>
-            <Button variant="outline" size="sm" className="h-7 text-[10px]" onClick={downloadImage}>Download</Button>
+            <p className="text-xs font-semibold">Hasil ✨</p>
+            <Button variant="outline" size="sm" className="h-7 text-[10px]" onClick={downloadImage}>📥 Download</Button>
           </div>
-          <img src={outputImage} alt="Generated" className="w-full rounded-xl" />
+          <img src={outputImage} alt="Generated" className="w-full rounded-xl shadow-lg" />
         </Card>
       )}
 
