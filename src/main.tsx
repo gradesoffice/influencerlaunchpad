@@ -9,6 +9,8 @@ import DashboardPage from "./pages/DashboardPage";
 import AnalyticsPage from "./pages/AnalyticsPage";
 import PricingPage from "./pages/PricingPage";
 import StrategiesPage from "./pages/StrategiesPage";
+import LegalPage from "./pages/LegalPage";
+import AdminPage from "./pages/AdminPage";
 
 function ErrorPage() {
   return (
@@ -37,6 +39,8 @@ const router = createBrowserRouter([
       { path: "analytics", element: <AnalyticsPage /> },
       { path: "pricing", element: <PricingPage /> },
       { path: "strategies", element: <StrategiesPage /> },
+      { path: "legal", element: <LegalPage /> },
+      { path: "admin", element: <AdminPage /> },
     ],
   },
 ]);

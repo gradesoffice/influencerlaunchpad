@@ -120,8 +120,9 @@ export default function LoginPage() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-border py-8 text-center text-sm text-muted-foreground">
-        <p>&copy; 2025 Influencer Launchpad. All rights reserved.</p>
+      <footer className="border-t border-border py-8 text-center text-sm text-muted-foreground space-y-2">
+        <p>&copy; 2026 Influencer Launchpad. All rights reserved.</p>
+        <a href="/legal" className="text-xs text-primary hover:underline">Privacy Policy & Terms of Service</a>
       </footer>
     </div>
   );

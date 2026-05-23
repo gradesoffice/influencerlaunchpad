@@ -213,11 +213,18 @@ export default function DashboardPage() {
 
           {/* Empty state */}
           {emptyState && (
-            <div className="text-center py-16 space-y-4">
+            <div className="text-center py-16 space-y-5">
               <div className="mx-auto h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center"><Rocket className="h-8 w-8 text-primary" /></div>
               <h2 className="text-lg font-bold">Daftarkan brand-mu di sini</h2>
               <p className="text-sm text-muted-foreground max-w-xs mx-auto">Buat strategi pertama dan mulai perjalanan menuju influencer.</p>
               <Button onClick={() => setShowForm(true)} className="text-primary-foreground" style={{ background: "var(--gradient-hero)" }}><Sparkles className="mr-2 h-4 w-4" />Mulai Sekarang</Button>
+              {/* Onboarding steps */}
+              <div className="max-w-sm mx-auto pt-6 space-y-3 text-left">
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wide text-center">Cara kerja</p>
+                <div className="flex items-start gap-3"><span className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary shrink-0">1</span><div><p className="text-xs font-medium">Isi profil brand</p><p className="text-[10px] text-muted-foreground">Niche, audiens, tujuan konversi</p></div></div>
+                <div className="flex items-start gap-3"><span className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary shrink-0">2</span><div><p className="text-xs font-medium">AI generate strategi 90 hari</p><p className="text-[10px] text-muted-foreground">Brand identity + roadmap + pain points audiens</p></div></div>
+                <div className="flex items-start gap-3"><span className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary shrink-0">3</span><div><p className="text-xs font-medium">Generate konten mingguan</p><p className="text-[10px] text-muted-foreground">Hook, caption, CTA siap copy-paste</p></div></div>
+              </div>
             </div>
           )}
 
