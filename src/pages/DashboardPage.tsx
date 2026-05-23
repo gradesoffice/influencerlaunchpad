@@ -241,36 +241,72 @@ export default function DashboardPage() {
 
           {/* HOME VIEW */}
           {activeNav === "home" && <>
-            {/* Streak */}
-            <div className="rounded-xl bg-white p-4 border border-border/40 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg bg-amber-50 flex items-center justify-center"><Target className="h-5 w-5 text-amber-600" /></div>
-                <div><p className="text-[10px] text-muted-foreground uppercase tracking-wide">Streak hari ini</p><p className="text-lg font-bold">{Object.values(feedback).filter(f => f.posted_at && new Date(f.posted_at).toDateString() === new Date().toDateString()).length}<span className="text-xs font-normal text-muted-foreground"> / {form.postsPerDay}</span></p></div>
-              </div>
-              <TrendingUp className="h-5 w-5 text-muted-foreground/40" />
+            {/* Dynamic greeting + motivational status */}
+            <div className="rounded-xl bg-gradient-to-br from-primary/5 via-violet-50 to-amber-50/50 p-5 border border-border/40">
+              <p className="text-[10px] uppercase tracking-widest text-primary font-semibold mb-1">{(() => { const h = new Date().getHours(); return h < 11 ? "Selamat pagi" : h < 15 ? "Selamat siang" : h < 19 ? "Selamat sore" : "Selamat malam"; })()}</p>
+              <h2 className="text-xl font-bold leading-tight">{(() => {
+                if (completedWeeks === 0) return "Yuk mulai perjalananmu hari ini.";
+                if (progressPct < 25) return "Setiap konten adalah langkah maju.";
+                if (progressPct < 50) return "Momentum mulai terbentuk. Pertahankan.";
+                if (progressPct < 75) return "Kamu sudah lebih dari setengah jalan.";
+                return "Tinggal sedikit lagi menuju akhir roadmap.";
+              })()}</h2>
+              <p className="text-xs text-muted-foreground mt-2">{Object.values(feedback).filter(f => f.posted_at && new Date(f.posted_at).toDateString() === new Date().toDateString()).length > 0 ? `${Object.values(feedback).filter(f => f.posted_at && new Date(f.posted_at).toDateString() === new Date().toDateString()).length} konten sudah ter-track hari ini ✨` : "Belum ada konten ter-track hari ini. Mari produktif!"}</p>
             </div>
 
-            {/* Mini analytics preview (locked for free) */}
-            <div className={`rounded-xl bg-white p-4 border border-border/40 cursor-pointer hover:border-primary/30 transition ${userPlan === "free" ? "opacity-50" : ""}`} onClick={() => setActiveNav("analitik")}>
+            {/* Streak + Today's target */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-xl bg-white p-4 border border-border/40">
+                <div className="flex items-center justify-between mb-2">
+                  <Target className="h-4 w-4 text-amber-500" />
+                  <span className="text-[9px] text-muted-foreground uppercase tracking-wide">Hari ini</span>
+                </div>
+                <p className="text-2xl font-bold">{Object.values(feedback).filter(f => f.posted_at && new Date(f.posted_at).toDateString() === new Date().toDateString()).length}<span className="text-sm font-normal text-muted-foreground">/{form.postsPerDay}</span></p>
+                <p className="text-[10px] text-muted-foreground mt-0.5">Konten ter-track</p>
+              </div>
+              <div className="rounded-xl bg-white p-4 border border-border/40">
+                <div className="flex items-center justify-between mb-2">
+                  <Rocket className="h-4 w-4 text-violet-500" />
+                  <span className="text-[9px] text-muted-foreground uppercase tracking-wide">Total</span>
+                </div>
+                <p className="text-2xl font-bold">{Object.values(feedback).filter(f => f.posted_at).length}</p>
+                <p className="text-[10px] text-muted-foreground mt-0.5">Konten posted</p>
+              </div>
+            </div>
+
+            {/* Performa - clean grid */}
+            <div className={`rounded-xl bg-white p-4 border border-border/40 cursor-pointer hover:border-primary/30 transition ${userPlan === "free" ? "opacity-60" : ""}`} onClick={() => setActiveNav("analitik")}>
               <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2"><BarChart3 className="h-4 w-4 text-primary" /><p className="text-xs font-semibold">Performa</p></div>
-                {userPlan === "free" && <span className="text-[9px] font-medium text-muted-foreground">PRO</span>}
+                <div className="flex items-center gap-2"><BarChart3 className="h-4 w-4 text-primary" /><p className="text-xs font-semibold">Performa Total</p></div>
+                <div className="flex items-center gap-1">
+                  {userPlan === "free" && <span className="text-[9px] font-medium text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">PRO</span>}
+                  <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50" />
+                </div>
               </div>
-              <div className="grid grid-cols-4 gap-2 text-center">
-                <div className="flex flex-col items-center gap-1"><Heart className="h-3.5 w-3.5 text-rose-400" /><p className="text-base font-semibold">{totalLikes}</p></div>
-                <div className="flex flex-col items-center gap-1"><Eye className="h-3.5 w-3.5 text-blue-400" /><p className="text-base font-semibold">{totalReach > 0 ? `${(totalReach/1000).toFixed(1)}K` : "—"}</p></div>
-                <div className="flex flex-col items-center gap-1"><Send className="h-3.5 w-3.5 text-violet-400" /><p className="text-base font-semibold">{totalDM}</p></div>
-                <div className="flex flex-col items-center gap-1"><ShoppingCart className="h-3.5 w-3.5 text-emerald-400" /><p className="text-base font-semibold">{totalConversions}</p></div>
+              <div className="grid grid-cols-4 gap-2">
+                <div className="text-center"><Heart className="h-4 w-4 text-rose-400 mx-auto mb-1" /><p className="text-base font-bold">{totalLikes}</p><p className="text-[9px] text-muted-foreground">Likes</p></div>
+                <div className="text-center"><Eye className="h-4 w-4 text-blue-400 mx-auto mb-1" /><p className="text-base font-bold">{totalReach > 0 ? `${(totalReach/1000).toFixed(1)}K` : "—"}</p><p className="text-[9px] text-muted-foreground">Reach</p></div>
+                <div className="text-center"><Send className="h-4 w-4 text-violet-400 mx-auto mb-1" /><p className="text-base font-bold">{totalDM}</p><p className="text-[9px] text-muted-foreground">DM</p></div>
+                <div className="text-center"><ShoppingCart className="h-4 w-4 text-emerald-400 mx-auto mb-1" /><p className="text-base font-bold">{totalConversions}</p><p className="text-[9px] text-muted-foreground">Konversi</p></div>
               </div>
             </div>
 
-            {/* Progress */}
-            <div className="rounded-xl bg-white p-4 border border-border/40 flex items-center gap-4">
-              <div className="relative h-12 w-12 shrink-0">
-                <svg className="h-12 w-12 -rotate-90"><circle cx="24" cy="24" r="20" fill="none" stroke="#f3f4f6" strokeWidth="4" /><circle cx="24" cy="24" r="20" fill="none" stroke="hsl(var(--primary))" strokeWidth="4" strokeDasharray={`${progressPct * 1.26} 126`} strokeLinecap="round" /></svg>
-                <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold">{progressPct}%</span>
+            {/* Progress with CTA */}
+            <div className="rounded-xl bg-white p-4 border border-border/40">
+              <div className="flex items-center gap-4 mb-3">
+                <div className="relative h-14 w-14 shrink-0">
+                  <svg className="h-14 w-14 -rotate-90"><circle cx="28" cy="28" r="24" fill="none" stroke="#f3f4f6" strokeWidth="4" /><circle cx="28" cy="28" r="24" fill="none" stroke="hsl(var(--primary))" strokeWidth="4" strokeDasharray={`${progressPct * 1.51} 151`} strokeLinecap="round" /></svg>
+                  <span className="absolute inset-0 flex items-center justify-center text-xs font-bold">{progressPct}%</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold">{completedWeeks} / {totalWeeksAvailable} minggu</p>
+                  <p className="text-[10px] text-muted-foreground">{progressPct < 100 ? `${totalWeeksAvailable - completedWeeks} minggu lagi menuju akhir` : "Roadmap selesai!"}</p>
+                </div>
               </div>
-              <div><p className="text-xs font-semibold">{completedWeeks} dari {totalWeeksAvailable} minggu</p><p className="text-[10px] text-muted-foreground">Progress strategi</p></div>
+              <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                <div className="h-full rounded-full bg-gradient-to-r from-primary to-violet-500 transition-all" style={{ width: `${progressPct}%` }} />
+              </div>
+              {completedWeeks < totalWeeksAvailable && <button onClick={() => setActiveNav("konten")} className="w-full mt-3 text-[11px] text-primary font-medium flex items-center justify-center gap-1 hover:underline">Lanjut ke minggu {completedWeeks + 1} <ChevronRight className="h-3 w-3" /></button>}
             </div>
           </>}
 
