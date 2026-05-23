@@ -185,7 +185,7 @@ export default function DashboardPage() {
           <SideIcon icon={<MapIcon className="h-5 w-5" />} active={activeNav === "roadmap"} onClick={() => setActiveNav("roadmap")} tooltip="Roadmap" />
           <SideIcon icon={<FileText className="h-5 w-5" />} active={activeNav === "konten"} onClick={() => setActiveNav("konten")} tooltip="Konten" />
           <SideIcon icon={<BarChart3 className="h-5 w-5" />} active={activeNav === "analitik"} onClick={() => tryProFeature("analitik")} tooltip="Analitik" locked={userPlan === "free"} />
-          <SideIcon icon={<Users className="h-5 w-5" />} active={activeNav === "audiens"} onClick={() => tryProFeature("audiens")} tooltip="Audiens" locked={userPlan === "free"} />
+          <SideIcon icon={<Sparkles className="h-5 w-5" />} active={activeNav === "audiens"} onClick={() => tryProFeature("audiens")} tooltip="Production" locked={userPlan === "free"} />
           <SideIcon icon={<Gauge className="h-5 w-5" />} active={activeNav === "kpi"} onClick={() => tryProFeature("kpi")} tooltip="KPI" locked={userPlan === "free"} />
           <SideIcon icon={<Lightbulb className="h-5 w-5" />} active={activeNav === "insight"} onClick={() => tryProFeature("insight")} tooltip="Insight" locked={userPlan === "free"} />
         </nav>
@@ -321,8 +321,8 @@ export default function DashboardPage() {
             </div>
           </Card>}
 
-          {/* Audiens View (Pro) */}
-          {activeNav === "audiens" && <AudiensView niche={form.niche} audience={form.audience} platform={form.platform} />}
+          {/* AI Production Store (Business) */}
+          {activeNav === "audiens" && <AudiensView niche={form.niche} audience={form.audience} platform={form.platform} userPlan={userPlan} weeks={weeks} />}
 
           {/* KPI Tracker View (Pro) */}
           {activeNav === "kpi" && <KPIView feedback={fbVals} totalWeeks={completedWeeks} />}
@@ -344,7 +344,7 @@ export default function DashboardPage() {
         <div className="flex items-center justify-around">
           <button onClick={() => setActiveNav("home")} className={`p-2 rounded-xl transition ${activeNav === "home" || activeNav === "konten" ? "text-primary bg-primary/10" : "text-muted-foreground"}`}><Home className="h-5 w-5" /></button>
           <button onClick={() => setActiveNav("roadmap")} className={`p-2 rounded-xl transition ${activeNav === "roadmap" ? "text-primary bg-primary/10" : "text-muted-foreground"}`}><MapIcon className="h-5 w-5" /></button>
-          <button onClick={() => tryProFeature("audiens")} className={`p-2 rounded-xl transition ${activeNav === "audiens" ? "text-primary bg-primary/10" : "text-muted-foreground"}`}><Users className="h-5 w-5" /></button>
+          <button onClick={() => tryProFeature("audiens")} className={`p-2 rounded-xl transition ${activeNav === "audiens" ? "text-primary bg-primary/10" : "text-muted-foreground"}`}><Sparkles className="h-5 w-5" /></button>
           <button onClick={() => tryProFeature("analitik")} className={`p-2 rounded-xl transition ${activeNav === "analitik" || activeNav === "kpi" ? "text-primary bg-primary/10" : "text-muted-foreground"}`}><BarChart3 className="h-5 w-5" /></button>
           <button onClick={() => tryProFeature("insight")} className={`p-2 rounded-xl transition ${activeNav === "insight" ? "text-primary bg-primary/10" : "text-muted-foreground"}`}><Lightbulb className="h-5 w-5" /></button>
         </div>
@@ -510,22 +510,138 @@ function PF({ text }: { text: string }) { return <div className="flex items-cent
 function PL({ text }: { text: string }) { return <div className="flex items-center gap-2 text-muted-foreground"><span className="h-3.5 w-3.5 shrink-0 text-center">—</span><span>{text}</span></div>; }
 
 // === PRO VIEWS ===
-function AudiensView({ niche, audience, platform }: { niche: string; audience: string; platform: string }) {
+function AudiensView({ niche, audience, platform, userPlan, weeks }: { niche: string; audience: string; platform: string; userPlan: string; weeks: Record<number, WeekPlan> }) {
+  const [selectedHook, setSelectedHook] = useState("");
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [outputImage, setOutputImage] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [usedToday, setUsedToday] = useState(0);
+
+  // Collect all hooks from weeks
+  const allHooks: string[] = [];
+  Object.values(weeks).forEach((w: any) => (w?.days || []).forEach((d: any) => (d?.posts || []).forEach((p: any) => { if (p.hook) allHooks.push(p.hook); })));
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImageFile(file);
+    setOutputImage(null);
+    const reader = new FileReader();
+    reader.onload = () => setImagePreview(reader.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  const generate = async () => {
+    if (!imagePreview || !selectedHook) { toast.error("Upload foto & pilih hook dulu"); return; }
+    setLoading(true); setOutputImage(null);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch("/api/image-enhance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}) },
+        body: JSON.stringify({ hook: selectedHook, imageBase64: imagePreview, style: "modern Instagram story, aesthetic, bold text overlay" }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setOutputImage(data.image);
+        setUsedToday(data.usedToday || 0);
+        toast.success("Gambar siap!");
+      } else {
+        const err = await res.json().catch(() => null);
+        toast.error(err?.error || "Gagal generate");
+      }
+    } catch { toast.error("Gagal"); }
+    setLoading(false);
+  };
+
+  const downloadImage = () => {
+    if (!outputImage) return;
+    const link = document.createElement("a");
+    link.href = outputImage;
+    link.download = `content-${Date.now()}.png`;
+    link.click();
+  };
+
+  if (userPlan !== "business") {
+    return (
+      <div className="space-y-4">
+        <h2 className="text-lg font-bold flex items-center gap-2"><Sparkles className="h-5 w-5 text-violet-500" />AI Production Store</h2>
+        <Card className="p-8 text-center border-border/40">
+          <div className="mx-auto h-14 w-14 rounded-full bg-violet-50 flex items-center justify-center mb-4"><Crown className="h-6 w-6 text-violet-500" /></div>
+          <h3 className="text-sm font-bold mb-1">Business Plan Only</h3>
+          <p className="text-xs text-muted-foreground mb-4">Upload foto mentah → AI ubah jadi konten cantik dengan hook terbaik.</p>
+          <p className="text-[10px] text-muted-foreground">Upgrade ke Business untuk akses fitur ini.</p>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
-      <h2 className="text-lg font-bold flex items-center gap-2"><Users className="h-5 w-5 text-emerald-500" />Audiens Kamu</h2>
-      <Card className="p-5"><p className="text-xs font-semibold uppercase text-muted-foreground mb-2">Target Audiens</p><p className="text-sm">{audience}</p></Card>
-      <div className="grid grid-cols-2 gap-3">
-        <Card className="p-4 text-center"><p className="text-xs text-muted-foreground">Platform</p><p className="text-lg font-bold">{platform}</p></Card>
-        <Card className="p-4 text-center"><p className="text-xs text-muted-foreground">Niche</p><p className="text-lg font-bold truncate">{niche}</p></Card>
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-bold flex items-center gap-2"><Sparkles className="h-5 w-5 text-violet-500" />AI Production Store</h2>
+        <span className="text-[10px] text-muted-foreground">{usedToday}/3 hari ini</span>
       </div>
-      <Card className="p-5"><p className="text-xs font-semibold uppercase text-muted-foreground mb-3">Rekomendasi AI</p>
-        <div className="space-y-2 text-sm">
-          <p>📌 Fokus pada pain points utama audiens kamu</p>
-          <p>📌 Gunakan bahasa yang relatable</p>
-          <p>📌 Posting di jam aktif audiens (7-9 pagi, 19-21 malam)</p>
-          <p>📌 Variasikan format: edukasi 40%, story 30%, CTA 30%</p>
+
+      <Card className="p-4 border-border/40">
+        <p className="text-xs text-muted-foreground mb-3">Upload foto mentah → pilih hook → AI generate gambar cantik siap post.</p>
+
+        {/* Upload */}
+        <div className="mb-3">
+          <label className="block w-full cursor-pointer">
+            <div className={`rounded-xl border-2 border-dashed p-4 text-center transition ${imagePreview ? "border-primary/30" : "border-border hover:border-primary/50"}`}>
+              {imagePreview ? (
+                <img src={imagePreview} alt="Preview" className="max-h-48 mx-auto rounded-lg object-cover" />
+              ) : (
+                <div className="py-4"><Rocket className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" /><p className="text-xs text-muted-foreground">Tap untuk upload foto</p></div>
+              )}
+            </div>
+            <input type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
+          </label>
         </div>
+
+        {/* Hook selector */}
+        <div className="mb-3">
+          <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1.5">Pilih Hook</p>
+          {allHooks.length > 0 ? (
+            <select value={selectedHook} onChange={e => setSelectedHook(e.target.value)} className="w-full h-9 rounded-md border border-input bg-background px-3 text-xs">
+              <option value="">— Pilih hook —</option>
+              {allHooks.slice(0, 30).map((h, i) => <option key={i} value={h}>{h}</option>)}
+            </select>
+          ) : (
+            <p className="text-[10px] text-muted-foreground italic">Generate konten mingguan dulu untuk mendapat hook.</p>
+          )}
+        </div>
+
+        {/* Generate button */}
+        <Button onClick={generate} disabled={loading || !imagePreview || !selectedHook} className="w-full h-10 text-sm font-semibold text-primary-foreground" style={{ background: "var(--gradient-hero)" }}>
+          {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Sparkles className="h-4 w-4 mr-2" />}
+          {loading ? "Generating..." : "Generate Konten"}
+        </Button>
+      </Card>
+
+      {/* Output */}
+      {outputImage && (
+        <Card className="p-4 border-border/40">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-xs font-semibold">Hasil</p>
+            <Button variant="outline" size="sm" className="h-7 text-[10px]" onClick={downloadImage}>Download</Button>
+          </div>
+          <img src={outputImage} alt="Generated" className="w-full rounded-xl" />
+        </Card>
+      )}
+
+      {/* Credit info */}
+      <Card className="p-4 border-border/40">
+        <p className="text-xs font-semibold mb-2">Credit Tambahan</p>
+        <p className="text-[10px] text-muted-foreground mb-3">3 gambar/hari gratis. Butuh lebih? Beli credit:</p>
+        <div className="grid grid-cols-3 gap-2">
+          <div className="rounded-lg border p-2.5 text-center"><p className="text-xs font-bold">10</p><p className="text-[9px] text-muted-foreground">gambar</p><p className="text-xs font-semibold text-primary mt-1">Rp 18rb</p></div>
+          <div className="rounded-lg border-2 border-primary p-2.5 text-center"><p className="text-xs font-bold">30</p><p className="text-[9px] text-muted-foreground">gambar</p><p className="text-xs font-semibold text-primary mt-1">Rp 39rb</p></div>
+          <div className="rounded-lg border p-2.5 text-center"><p className="text-xs font-bold">50</p><p className="text-[9px] text-muted-foreground">gambar</p><p className="text-xs font-semibold text-primary mt-1">Rp 59rb</p></div>
+        </div>
+        <p className="text-[9px] text-muted-foreground italic mt-2 text-center">Hubungi admin WA untuk beli credit.</p>
       </Card>
     </div>
   );
