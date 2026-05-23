@@ -517,6 +517,10 @@ function AudiensView({ niche, audience, platform, userPlan, weeks }: { niche: st
   const [outputImage, setOutputImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [usedToday, setUsedToday] = useState(0);
+  const [history, setHistory] = useState<{ image: string; hook: string; date: string }[]>(() => {
+    try { return JSON.parse(localStorage.getItem("ila_img_history") || "[]"); } catch { return []; }
+  });
+  const [showCreditPaywall, setShowCreditPaywall] = useState(false);
 
   // Collect all hooks from weeks
   const allHooks: string[] = [];
@@ -547,13 +551,21 @@ function AudiensView({ niche, audience, platform, userPlan, weeks }: { niche: st
         if (data.image) {
           setOutputImage(data.image);
           setUsedToday(data.usedToday || 0);
+          // Save to history
+          const newHistory = [{ image: data.image, hook: selectedHook, date: new Date().toLocaleString("id-ID") }, ...history].slice(0, 20);
+          setHistory(newHistory);
+          try { localStorage.setItem("ila_img_history", JSON.stringify(newHistory)); } catch {}
           toast.success("Konten siap download!");
         } else {
           toast.error("AI tidak menghasilkan gambar. Coba lagi.");
         }
       } else {
         const err = await res.json().catch(() => null);
-        toast.error(err?.error || "Gagal generate");
+        if (err?.code === "CREDIT_LIMIT") {
+          setShowCreditPaywall(true);
+        } else {
+          toast.error(err?.error || "Gagal generate");
+        }
       }
     } catch { toast.error("Gagal, coba lagi"); }
     setLoading(false);
@@ -575,7 +587,14 @@ function AudiensView({ niche, audience, platform, userPlan, weeks }: { niche: st
           <div className="mx-auto h-14 w-14 rounded-full bg-violet-50 flex items-center justify-center mb-4"><Crown className="h-6 w-6 text-violet-500" /></div>
           <h3 className="text-sm font-bold mb-1">Business Plan Only</h3>
           <p className="text-xs text-muted-foreground mb-4">Upload foto mentah → AI ubah jadi konten cantik dengan hook terbaik.</p>
-          <p className="text-[10px] text-muted-foreground">Upgrade ke Business untuk akses fitur ini.</p>
+          <div className="space-y-2 mb-5 text-[11px] text-left max-w-xs mx-auto">
+            <div className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-emerald-500" /><span>3 gambar gratis/hari</span></div>
+            <div className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-emerald-500" /><span>AI aesthetic level ChatGPT</span></div>
+            <div className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-emerald-500" /><span>Hook otomatis dari strategi</span></div>
+            <div className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-emerald-500" /><span>Download siap post</span></div>
+          </div>
+          <Button onClick={() => window.location.href = "/pricing"} className="w-full h-10 text-sm font-semibold text-primary-foreground" style={{ background: "var(--gradient-hero)" }}>Upgrade ke Business — Rp 249.000/bln</Button>
+          <p className="text-[9px] text-muted-foreground mt-2">Garansi 7 hari uang kembali</p>
         </Card>
       </div>
     );
@@ -661,6 +680,49 @@ function AudiensView({ niche, audience, platform, userPlan, weeks }: { niche: st
         </div>
         <p className="text-[9px] text-muted-foreground italic mt-2 text-center">Hubungi admin WA untuk beli credit.</p>
       </Card>
+
+      {/* History */}
+      {history.length > 0 && (
+        <Card className="p-4 border-border/40">
+          <p className="text-xs font-semibold mb-3">📂 Riwayat Generate</p>
+          <div className="grid grid-cols-3 gap-2">
+            {history.map((h, i) => (
+              <div key={i} className="relative group cursor-pointer" onClick={() => { const link = document.createElement("a"); link.href = h.image; link.download = `konten-${i}.png`; link.click(); }}>
+                <img src={h.image} alt={h.hook} className="w-full aspect-[9/16] object-cover rounded-lg" />
+                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition rounded-lg flex items-center justify-center">
+                  <p className="text-[9px] text-white text-center px-1">📥 Download</p>
+                </div>
+                <p className="text-[8px] text-muted-foreground mt-1 line-clamp-1">{h.hook}</p>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {/* Credit Paywall */}
+      {showCreditPaywall && <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
+        <div className="w-full max-w-sm bg-white rounded-2xl p-6 relative">
+          <button onClick={() => setShowCreditPaywall(false)} className="absolute top-3 right-3 h-7 w-7 rounded-full border flex items-center justify-center text-muted-foreground hover:bg-muted"><X className="h-3.5 w-3.5" /></button>
+          <div className="text-center mb-4"><Sparkles className="h-10 w-10 text-violet-500 mx-auto mb-2" /><h2 className="text-lg font-bold">Kuota Habis</h2><p className="text-xs text-muted-foreground mt-1">3 gambar gratis hari ini sudah terpakai. Beli credit untuk lanjut generate.</p></div>
+          <div className="space-y-2 mb-5">
+            <div className="rounded-xl border-2 border-border p-3 flex items-center justify-between hover:border-primary/50 transition cursor-pointer">
+              <div><p className="text-sm font-bold">10 gambar</p><p className="text-[10px] text-muted-foreground">Rp 1.800/gambar</p></div>
+              <p className="text-sm font-bold text-primary">Rp 18.000</p>
+            </div>
+            <div className="rounded-xl border-2 border-primary p-3 flex items-center justify-between relative">
+              <Badge className="absolute -top-2 left-3 bg-primary text-primary-foreground text-[8px] px-2">Popular</Badge>
+              <div><p className="text-sm font-bold">30 gambar</p><p className="text-[10px] text-muted-foreground">Rp 1.300/gambar</p></div>
+              <p className="text-sm font-bold text-primary">Rp 39.000</p>
+            </div>
+            <div className="rounded-xl border-2 border-border p-3 flex items-center justify-between hover:border-primary/50 transition cursor-pointer">
+              <div><p className="text-sm font-bold">50 gambar</p><p className="text-[10px] text-muted-foreground">Rp 1.180/gambar</p></div>
+              <p className="text-sm font-bold text-primary">Rp 59.000</p>
+            </div>
+          </div>
+          <a href="https://wa.me/6285656787625?text=Halo%20admin%2C%20saya%20mau%20beli%20credit%20AI%20Production%20Store" target="_blank" rel="noopener noreferrer" className="block w-full h-11 rounded-xl bg-emerald-500 text-white text-sm font-semibold flex items-center justify-center gap-2 hover:bg-emerald-600 transition">Beli via WhatsApp</a>
+          <p className="text-center text-[9px] text-muted-foreground mt-3">Credit tidak expire. Pakai kapan saja.</p>
+        </div>
+      </div>}
     </div>
   );
 }
