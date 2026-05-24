@@ -183,7 +183,6 @@ export default function DashboardPage() {
         <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center mb-6"><Rocket className="h-5 w-5 text-primary" /></div>
         <nav className="space-y-2 flex-1">
           <SideIcon icon={<Home className="h-5 w-5" />} active={activeNav === "home"} onClick={() => setActiveNav("home")} tooltip="Overview" />
-          <SideIcon icon={<MapIcon className="h-5 w-5" />} active={activeNav === "roadmap"} onClick={() => setActiveNav("roadmap")} tooltip="Roadmap" />
           <SideIcon icon={<FileText className="h-5 w-5" />} active={activeNav === "konten"} onClick={() => setActiveNav("konten")} tooltip="Konten" />
           <SideIcon icon={<BarChart3 className="h-5 w-5" />} active={activeNav === "analitik"} onClick={() => tryProFeature("analitik")} tooltip="Analitik" locked={userPlan === "free"} />
           <SideIcon icon={<Sparkles className="h-5 w-5" />} active={activeNav === "audiens"} onClick={() => tryProFeature("audiens")} tooltip="Production" locked={userPlan === "free"} />
@@ -362,12 +361,14 @@ export default function DashboardPage() {
           </>}
 
           {/* Phases - clean */}
-          {(activeNav === "home" || activeNav === "konten") && strategy.phases.map((phase, pi) => {
+          {(activeNav === "home" || activeNav === "konten") && <>
+          {activeNav === "konten" && <h2 className="text-lg font-bold">Ini Strategi Ngonten Kamu</h2>}
+          {strategy.phases.map((phase, pi) => {
             const weekOffset = strategy.phases.slice(0, pi).reduce((s, p) => s + p.weeklyThemes.length, 0);
             return (
               <div key={pi} className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <p className="text-xs font-semibold uppercase text-primary">Phase {pi + 1} · {phase.name}</p>
+                  <p className="text-[10px] font-semibold uppercase text-muted-foreground">Tahap {pi + 1} · {phase.name}</p>
                   <p className="text-[10px] text-muted-foreground">W{weekOffset + 1}–{weekOffset + phase.weeklyThemes.length}</p>
                 </div>
 
@@ -399,6 +400,7 @@ export default function DashboardPage() {
               </div>
             );
           })}
+          </>}
 
           {/* Progress ring */}
           {activeNav === "home" && <Card className="p-5 flex items-center justify-between">
@@ -420,9 +422,6 @@ export default function DashboardPage() {
 
           {/* Analitik View (Pro) */}
           {activeNav === "analitik" && <AnalitikInline strategyId={strategyId} />}
-
-          {/* Roadmap View */}
-          {activeNav === "roadmap" && strategy && <RoadmapView strategy={strategy} weeks={weeks} completedWeeks={completedWeeks} totalWeeksAvailable={totalWeeksAvailable} />}
           </>}
         </div>
       </main>
@@ -430,8 +429,8 @@ export default function DashboardPage() {
       {/* Mobile bottom nav - clean */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-lg border-t border-border/50 px-4 py-2 z-20">
         <div className="flex items-center justify-around">
-          <button onClick={() => setActiveNav("home")} className={`p-2 rounded-xl transition ${activeNav === "home" || activeNav === "konten" ? "text-primary bg-primary/10" : "text-muted-foreground"}`}><Home className="h-5 w-5" /></button>
-          <button onClick={() => setActiveNav("roadmap")} className={`p-2 rounded-xl transition ${activeNav === "roadmap" ? "text-primary bg-primary/10" : "text-muted-foreground"}`}><MapIcon className="h-5 w-5" /></button>
+          <button onClick={() => setActiveNav("home")} className={`p-2 rounded-xl transition ${activeNav === "home" ? "text-primary bg-primary/10" : "text-muted-foreground"}`}><Home className="h-5 w-5" /></button>
+          <button onClick={() => setActiveNav("konten")} className={`p-2 rounded-xl transition ${activeNav === "konten" ? "text-primary bg-primary/10" : "text-muted-foreground"}`}><FileText className="h-5 w-5" /></button>
           <button onClick={() => tryProFeature("audiens")} className={`p-2 rounded-xl transition ${activeNav === "audiens" ? "text-primary bg-primary/10" : "text-muted-foreground"}`}><Sparkles className="h-5 w-5" /></button>
           <button onClick={() => tryProFeature("analitik")} className={`p-2 rounded-xl transition ${activeNav === "analitik" || activeNav === "kpi" ? "text-primary bg-primary/10" : "text-muted-foreground"}`}><BarChart3 className="h-5 w-5" /></button>
           <button onClick={() => tryProFeature("insight")} className={`p-2 rounded-xl transition ${activeNav === "insight" ? "text-primary bg-primary/10" : "text-muted-foreground"}`}><Lightbulb className="h-5 w-5" /></button>
@@ -1306,19 +1305,19 @@ function AnalitikInline({ strategyId }: { strategyId: string | null }) {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-lg font-bold flex items-center gap-2"><BarChart3 className="h-5 w-5 text-primary" />Analitik</h2>
+      <h2 className="text-lg font-bold">Ini Laporan Konten Kamu</h2>
 
       {/* Overview cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Card className="p-4 border-border/40"><div className="flex items-center justify-between mb-1"><FileText className="h-3.5 w-3.5 text-muted-foreground" /><p className="text-[9px] text-muted-foreground uppercase tracking-wide">Konten</p></div><p className="text-2xl font-bold">{totalPosts}</p></Card>
-        <Card className="p-4 border-border/40"><div className="flex items-center justify-between mb-1"><Heart className="h-3.5 w-3.5 text-rose-400" /><p className="text-[9px] text-muted-foreground uppercase tracking-wide">Likes</p></div><p className="text-2xl font-bold">{totals.likes}</p></Card>
-        <Card className="p-4 border-border/40"><div className="flex items-center justify-between mb-1"><Activity className="h-3.5 w-3.5 text-primary" /><p className="text-[9px] text-muted-foreground uppercase tracking-wide">Eng Rate</p></div><p className="text-2xl font-bold">{er}{er !== "—" ? "%" : ""}</p></Card>
-        <Card className="p-4 border-border/40"><div className="flex items-center justify-between mb-1"><ShoppingCart className="h-3.5 w-3.5 text-emerald-400" /><p className="text-[9px] text-muted-foreground uppercase tracking-wide">Konversi</p></div><p className="text-2xl font-bold">{totals.conversions}</p></Card>
+        <Card className="p-4 border-border/40"><div className="flex items-center justify-between mb-1"><FileText className="h-3.5 w-3.5 text-muted-foreground" /><p className="text-[9px] text-muted-foreground uppercase tracking-wide">Konten</p></div><p className="text-2xl font-bold">{totalPosts}</p><p className="text-[9px] text-muted-foreground">total dibuat</p></Card>
+        <Card className="p-4 border-border/40"><div className="flex items-center justify-between mb-1"><Heart className="h-3.5 w-3.5 text-rose-400" /><p className="text-[9px] text-muted-foreground uppercase tracking-wide">Suka</p></div><p className="text-2xl font-bold">{totals.likes}</p><p className="text-[9px] text-muted-foreground">orang suka</p></Card>
+        <Card className="p-4 border-border/40"><div className="flex items-center justify-between mb-1"><Activity className="h-3.5 w-3.5 text-primary" /><p className="text-[9px] text-muted-foreground uppercase tracking-wide">Interaksi</p></div><p className="text-2xl font-bold">{er}{er !== "—" ? "%" : ""}</p><p className="text-[9px] text-muted-foreground">dari yang lihat</p></Card>
+        <Card className="p-4 border-border/40"><div className="flex items-center justify-between mb-1"><ShoppingCart className="h-3.5 w-3.5 text-emerald-400" /><p className="text-[9px] text-muted-foreground uppercase tracking-wide">Pembeli</p></div><p className="text-2xl font-bold">{totals.conversions}</p><p className="text-[9px] text-muted-foreground">jadi beli</p></Card>
       </div>
 
       {/* Burnout */}
       <Card className="p-4 border-border/40">
-        <div className="flex items-center gap-2 mb-3"><Activity className="h-4 w-4 text-rose-500" /><p className="text-xs font-semibold">Burnout Monitor</p></div>
+        <div className="flex items-center gap-2 mb-3"><Activity className="h-4 w-4 text-rose-500" /><p className="text-xs font-semibold">Kamu Masih Semangat?</p></div>
         {burnoutAlerts.length > 0 ? <div className="space-y-2">
           {burnoutAlerts.map((a, i) => <div key={i} className={`rounded-lg p-2.5 text-[11px] flex items-start gap-2 ${a.level === "danger" ? "bg-rose-50 text-rose-800" : "bg-amber-50 text-amber-800"}`}><span className="shrink-0">{a.level === "danger" ? "🚨" : "⚠️"}</span><span>{a.text}</span></div>)}
         </div> : <div className="rounded-lg bg-emerald-50 p-2.5 text-[11px] text-emerald-800 flex items-center gap-2"><Check className="h-3.5 w-3.5" />Frekuensi posting stabil. Pertahankan konsistensi.</div>}
@@ -1327,7 +1326,7 @@ function AnalitikInline({ strategyId }: { strategyId: string | null }) {
 
       {/* Goal Tracking */}
       <Card className="p-4 border-border/40">
-        <div className="flex items-center gap-2 mb-3"><Target className="h-4 w-4 text-primary" /><p className="text-xs font-semibold">Goal Tracking</p></div>
+        <div className="flex items-center gap-2 mb-3"><Target className="h-4 w-4 text-primary" /><p className="text-xs font-semibold">Target Follower Kamu</p></div>
         <div className="grid grid-cols-2 gap-2 mb-3">
           <div><p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">Sekarang</p><Input type="number" value={currentFollowers} onChange={e => saveGoal(followerGoal, parseInt(e.target.value) || 0)} className="h-8 text-xs" /></div>
           <div><p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">Target</p><Input type="number" value={followerGoal} onChange={e => saveGoal(parseInt(e.target.value) || 0, currentFollowers)} className="h-8 text-xs" /></div>
@@ -1343,7 +1342,7 @@ function AnalitikInline({ strategyId }: { strategyId: string | null }) {
 
       {/* Funnel */}
       <Card className="p-4 border-border/40">
-        <div className="flex items-center gap-2 mb-3"><Zap className="h-4 w-4 text-amber-500" /><p className="text-xs font-semibold">Conversion Funnel</p></div>
+        <div className="flex items-center gap-2 mb-3"><Zap className="h-4 w-4 text-amber-500" /><p className="text-xs font-semibold">Dari Lihat Sampai Beli</p></div>
         {totals.reach > 0 ? <div className="space-y-2">
           {funnel.map((f, i) => <div key={f.stage} className="flex items-center gap-3">
             <span className="text-xs w-20 shrink-0 text-muted-foreground">{f.stage}</span>
@@ -1364,7 +1363,7 @@ function AnalitikInline({ strategyId }: { strategyId: string | null }) {
 
       {/* Cohort */}
       <Card className="p-4 border-border/40">
-        <div className="flex items-center gap-2 mb-3"><BarChart3 className="h-4 w-4 text-violet-500" /><p className="text-xs font-semibold">Engagement per Minggu</p></div>
+        <div className="flex items-center gap-2 mb-3"><BarChart3 className="h-4 w-4 text-violet-500" /><p className="text-xs font-semibold">Perkembangan Tiap Minggu</p></div>
         {cohort.length >= 2 ? <div className="space-y-1.5">
           {cohort.map(c => { const maxEng = Math.max(...cohort.map(x => x.avgEng), 1); return <div key={c.week} className="flex items-center gap-3">
             <span className="text-xs w-10 text-muted-foreground">{c.week}</span>
@@ -1376,7 +1375,7 @@ function AnalitikInline({ strategyId }: { strategyId: string | null }) {
 
       {/* Attribution */}
       <Card className="p-4 border-border/40">
-        <div className="flex items-center gap-2 mb-3"><Award className="h-4 w-4 text-emerald-500" /><p className="text-xs font-semibold">Top Konversi</p></div>
+        <div className="flex items-center gap-2 mb-3"><Award className="h-4 w-4 text-emerald-500" /><p className="text-xs font-semibold">Konten yang Menghasilkan Uang</p></div>
         {attribution.length > 0 ? <div className="space-y-2">
           {attribution.map((a: any, i) => <div key={i} className="rounded-lg bg-emerald-50/40 p-2.5">
             <div className="flex items-center justify-between mb-1">
@@ -1391,7 +1390,7 @@ function AnalitikInline({ strategyId }: { strategyId: string | null }) {
 
       {/* Content Type ROI */}
       <Card className="p-4 border-border/40">
-        <div className="flex items-center gap-2 mb-3"><TrendingUp className="h-4 w-4 text-amber-500" /><p className="text-xs font-semibold">Content Type ROI</p></div>
+        <div className="flex items-center gap-2 mb-3"><TrendingUp className="h-4 w-4 text-amber-500" /><p className="text-xs font-semibold">Jenis Konten Paling Laris</p></div>
         {contentROI.length > 0 ? <div className="space-y-2">
           {contentROI.slice(0, 5).map((c, i) => <div key={c.format} className="rounded-lg bg-muted/30 p-2.5 flex items-center justify-between">
             <div className="flex items-center gap-2.5">
