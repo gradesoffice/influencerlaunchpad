@@ -1435,28 +1435,28 @@ function PostCard({ post, fkey, wn, day, copiedKey, openFeedback, feedback, plat
   onFeedbackUpdate: (key: string, patch: Partial<Feedback>) => void;
   onProduction?: (hook: string) => void;
 }) {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded] = useState(true); // always open
   const isCopied = copiedKey === fkey;
   const fbOpen = openFeedback === fkey;
 
   return (
-    <div className="rounded-xl bg-white/80 p-3 mb-2 shadow-sm">
-      <button onClick={() => setExpanded(!expanded)} className="w-full text-left">
-        <div className="flex items-center gap-2 mb-1"><Badge variant="secondary" className="text-[9px] border-0">{post.format}</Badge><span className="text-[9px] text-muted-foreground">Day {day - (wn-1)*7}</span></div>
-        <p className={`text-sm font-medium ${expanded ? "" : "line-clamp-1"}`}>🪝 {post.hook}</p>
-      </button>
+    <div className="rounded-2xl bg-white p-5 mb-3 shadow-md border border-border/40">
+      <div className="flex items-center gap-2 mb-2"><Badge variant="secondary" className="text-[10px] font-semibold border-0 px-2.5 py-0.5">{post.format}</Badge><span className="text-[10px] text-muted-foreground">Konten {day - (wn-1)*7 > 0 ? day - (wn-1)*7 : day}</span></div>
+      <p className="text-base font-bold leading-snug mb-2">{post.hook}</p>
+      <p className="text-sm text-muted-foreground">{post.caption}</p>
+      <p className="text-sm mt-2"><strong>CTA:</strong> {post.cta}</p>
+      <p className="text-[11px] text-muted-foreground mt-2">🎨 {post.visualIdea}</p>
+      <div className="flex flex-wrap gap-1.5 mt-2">{post.hashtags.slice(0, 5).map((h, hi) => <span key={hi} className="text-[10px] text-primary/70 font-medium">{h.startsWith("#") ? h : `#${h}`}</span>)}</div>
+      
+      {/* Action buttons - ALWAYS VISIBLE & PROMINENT */}
+      <div className="flex gap-2 mt-4 pt-3 border-t border-border/30">
+        <button onClick={(e) => { e.stopPropagation(); onCopy(fkey, post); }} className={`flex-1 py-2.5 rounded-xl text-sm font-bold text-center transition ${isCopied ? "bg-emerald-500 text-white" : "bg-primary text-white hover:bg-primary/90"}`}>{isCopied ? "✓ Tersalin!" : "📋 Copy"}</button>
+        <button onClick={(e) => { e.stopPropagation(); onFeedbackToggle(fbOpen ? null : fkey); }} className={`flex-1 py-2.5 rounded-xl text-sm font-bold text-center transition ${fbOpen ? "bg-amber-500 text-white" : "bg-amber-100 text-amber-800 hover:bg-amber-200"}`}>📊 Track</button>
+        {onProduction && <button onClick={(e) => { e.stopPropagation(); onProduction(post.hook); }} className="py-2.5 px-4 rounded-xl text-sm font-bold bg-violet-100 text-violet-700 hover:bg-violet-200 transition">🎨</button>}
+      </div>
 
-      {expanded && <>
-        <p className="text-xs text-muted-foreground mt-2">{post.caption}</p>
-        <p className="text-xs mt-1"><strong>CTA:</strong> {post.cta}</p>
-        <p className="text-[10px] text-muted-foreground mt-1">🎨 {post.visualIdea}</p>
-        <div className="flex flex-wrap gap-1 mt-1">{post.hashtags.slice(0, 5).map((h, hi) => <span key={hi} className="text-[9px] text-primary/60">{h.startsWith("#") ? h : `#${h}`}</span>)}</div>
-        <div className="flex gap-2 mt-3">
-          <button onClick={(e) => { e.stopPropagation(); onCopy(fkey, post); }} className={`px-3 py-1.5 rounded-lg text-xs font-medium ${isCopied ? "bg-emerald-100 text-emerald-700" : "bg-primary/10 text-primary"}`}>{isCopied ? "✓ Copied" : "📋 Copy"}</button>
-          <button onClick={(e) => { e.stopPropagation(); onFeedbackToggle(fbOpen ? null : fkey); }} className="px-3 py-1.5 rounded-lg text-xs font-medium bg-muted text-muted-foreground">📊 Track</button>
-          {onProduction && <button onClick={(e) => { e.stopPropagation(); onProduction(post.hook); }} className="px-3 py-1.5 rounded-lg text-xs font-medium bg-violet-100 text-violet-700">🎨 Buat</button>}
-        </div>
-        {fbOpen && <div className="mt-2 space-y-2">
+      {/* Feedback form */}
+      {fbOpen && <div className="mt-3 space-y-2">
           {platforms.map(plat => {
             const pfkey = `${fkey}|${plat.toLowerCase()}`;
             const pfb = feedback[pfkey];
@@ -1472,7 +1472,6 @@ function PostCard({ post, fkey, wn, day, copiedKey, openFeedback, feedback, plat
             </div>;
           })}
         </div>}
-      </>}
     </div>
   );
 }
