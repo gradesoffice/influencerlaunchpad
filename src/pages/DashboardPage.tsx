@@ -267,6 +267,16 @@ export default function DashboardPage() {
                 return dayInWeek === todayDayNum;
               })?.posts || [];
 
+              // Check which posts are "completed" (copied + has feedback)
+              const isPostDone = (idx: number) => {
+                if (idx < 0 || idx >= todayPosts.length) return false;
+                const post = todayPosts[idx];
+                const fkey = `${currentWeekNum}|${(currentWeekNum-1)*7 + todayDayNum}|${post.slot}`;
+                // Check if copied (has posted_at) or has any feedback
+                const hasFb = Object.keys(feedback).some(k => k.startsWith(fkey));
+                return hasFb;
+              };
+
               return <>
                 {/* Greeting */}
                 <div className="rounded-xl bg-gradient-to-br from-primary/5 via-violet-50 to-amber-50/30 p-5 border border-border/40">
@@ -277,18 +287,29 @@ export default function DashboardPage() {
                   </> : <h2 className="text-lg font-bold">Setiap konten adalah langkah maju.</h2>}
                 </div>
 
-                {/* TODAY'S CONTENT - THE MAIN EVENT */}
+                {/* TODAY'S CONTENT - SLIDE CARDS */}
                 <div className="space-y-3">
                   <h2 className="text-xl font-bold text-center">KONTEN SAAT INI</h2>
-                  <p className="text-sm text-muted-foreground text-center -mt-2">Copy saja dan POSTING!</p>
+                  <p className="text-sm text-muted-foreground text-center -mt-2">Copy & posting satu per satu. Isi feedback sebelum lanjut.</p>
                   
                   {todayPosts.length > 0 ? <>
                     {todayPosts.map((post: any, i: number) => {
                       const fkey = `${currentWeekNum}|${(currentWeekNum-1)*7 + todayDayNum}|${post.slot}`;
+                      const prevDone = i === 0 ? true : isPostDone(i - 1);
+                      const isLocked = !prevDone;
+
+                      if (isLocked) {
+                        return <div key={i} className="rounded-xl bg-muted/30 p-4 opacity-40 pointer-events-none select-none">
+                          <div className="flex items-center gap-2 mb-1"><Badge variant="secondary" className="text-[9px] border-0">{post.format}</Badge><span className="text-[9px] text-muted-foreground">Konten {i + 1}</span></div>
+                          <p className="text-sm font-medium text-muted-foreground">🔒 Selesaikan konten sebelumnya dulu</p>
+                          <p className="text-[10px] text-muted-foreground mt-1">Copy + isi feedback konten di atas untuk unlock.</p>
+                        </div>;
+                      }
+
                       return <PostCard key={i} post={post} fkey={fkey} wn={currentWeekNum} day={(currentWeekNum-1)*7 + todayDayNum} copiedKey={copiedKey} openFeedback={openFeedback} feedback={feedback} platforms={form.platforms} onCopy={copyPost} onFeedbackToggle={setOpenFeedback} onFeedbackUpdate={updateFeedback} onProduction={(hook) => { setPreSelectedHook(hook); setActiveNav("audiens"); }} />;
                     })}
                   </> : <div className="rounded-xl bg-muted/30 p-6 text-center">
-                    <p className="text-sm text-muted-foreground">{currentWeekData ? "Semua konten hari ini sudah selesai!" : "Generate minggu ini dulu di tab Konten."}</p>
+                    <p className="text-sm text-muted-foreground">{currentWeekData ? "Semua konten hari ini sudah selesai! 🎉" : "Belum ada konten. Generate dulu di tab Konten."}</p>
                     {!currentWeekData && <button onClick={() => setActiveNav("konten")} className="mt-3 text-xs text-primary font-medium">Buka Tab Konten →</button>}
                   </div>}
                 </div>
