@@ -9,7 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
 
 // Admin email whitelist - only these can access
-const ADMIN_EMAILS = ["gradesofficialid@gmail.com", "gradesofficial@gmail.com"];
+const ADMIN_EMAILS = ["gradesofficialid@gmail.com", "gradesofficial@gmail.com", "gradesoffice@gmail.com"];
 
 type PendingPayment = {
   id: string;
