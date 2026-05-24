@@ -355,9 +355,9 @@ export default function DashboardPage() {
             })()}
           </>}
 
-          {/* Phases - clean */}
-          {(activeNav === "home" || activeNav === "konten") && <>
-          {activeNav === "konten" && <h2 className="text-lg font-bold">Ini Strategi Ngonten Kamu</h2>}
+          {/* Phases - only in Konten tab */}
+          {activeNav === "konten" && <>
+          <h2 className="text-lg font-bold">Ini Strategi Ngonten Kamu</h2>
           {strategy.phases.map((phase, pi) => {
             const weekOffset = strategy.phases.slice(0, pi).reduce((s, p) => s + p.weeklyThemes.length, 0);
             return (
