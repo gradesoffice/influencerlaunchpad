@@ -245,7 +245,6 @@ export default function DashboardPage() {
               const greeting = hour < 11 ? "SELAMAT PAGI" : hour < 15 ? "SELAMAT SIANG" : hour < 19 ? "SELAMAT SORE" : "SELAMAT MALAM";
               
               // Find current phase & week theme
-              let currentPhase = "";
               let currentTheme = "";
               let currentWeekNum = completedWeeks + 1;
               let phaseObjective = "";
@@ -254,7 +253,7 @@ export default function DashboardPage() {
                 for (const phase of strategy.phases) {
                   for (const theme of phase.weeklyThemes) {
                     offset++;
-                    if (offset === currentWeekNum) { currentPhase = phase.name; currentTheme = theme; phaseObjective = phase.objective; break; }
+                    if (offset === currentWeekNum) { currentTheme = theme; phaseObjective = phase.objective; break; }
                   }
                   if (currentTheme) break;
                 }
@@ -262,101 +261,77 @@ export default function DashboardPage() {
 
               // Find today's posts from current week
               const currentWeekData = weeks[currentWeekNum];
-              const todayDayNum = currentWeekData ? ((new Date().getDay() || 7)) : 0; // 1=Mon...7=Sun
+              const todayDayNum = currentWeekData ? ((new Date().getDay() || 7)) : 0;
               const todayPosts = currentWeekData?.days?.find((d: any) => {
                 const dayInWeek = d.day - (currentWeekNum - 1) * 7;
                 return dayInWeek === todayDayNum;
               })?.posts || [];
 
               return <>
+                {/* Greeting */}
                 <div className="rounded-xl bg-gradient-to-br from-primary/5 via-violet-50 to-amber-50/30 p-5 border border-border/40">
                   <p className="text-[10px] uppercase tracking-widest text-primary font-bold mb-2">{greeting}</p>
                   {currentTheme ? <>
-                    <h2 className="text-lg font-bold leading-snug">Hari ini kita akan <span className="text-primary">{phaseObjective || currentPhase}</span></h2>
+                    <h2 className="text-lg font-bold leading-snug">Hari ini kita <span className="text-primary">{phaseObjective || "bikin konten"}</span></h2>
                     <p className="text-xs text-muted-foreground mt-2">melalui <strong>{currentTheme}</strong></p>
-                  </> : <>
-                    <h2 className="text-lg font-bold leading-snug">Setiap konten adalah langkah maju.</h2>
-                    <p className="text-xs text-muted-foreground mt-2">Generate minggu berikutnya untuk lihat misi hari ini.</p>
-                  </>}
+                  </> : <h2 className="text-lg font-bold">Setiap konten adalah langkah maju.</h2>}
                 </div>
 
-                {/* Today's posts */}
-                {todayPosts.length > 0 && <div className="space-y-2">
-                  <p className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold">Konten hari ini · Day {todayDayNum}</p>
-                  {todayPosts.map((post: any, i: number) => {
-                    const fkey = `${currentWeekNum}|${(currentWeekNum-1)*7 + todayDayNum}|${post.slot}`;
-                    return <PostCard key={i} post={post} fkey={fkey} wn={currentWeekNum} day={(currentWeekNum-1)*7 + todayDayNum} copiedKey={copiedKey} openFeedback={openFeedback} feedback={feedback} platforms={form.platforms} onCopy={copyPost} onFeedbackToggle={setOpenFeedback} onFeedbackUpdate={updateFeedback} onProduction={(hook) => { setPreSelectedHook(hook); setActiveNav("audiens"); }} />;
-                  })}
-                  <p className="text-[10px] text-muted-foreground italic text-center pt-1">Selesaikan postingan 1 dulu sebelum lanjut ke berikutnya.</p>
-                </div>}
+                {/* TODAY'S CONTENT - THE MAIN EVENT */}
+                <div className="space-y-3">
+                  <h2 className="text-xl font-bold text-center">KONTEN SAAT INI</h2>
+                  <p className="text-sm text-muted-foreground text-center -mt-2">Copy saja dan POSTING!</p>
+                  
+                  {todayPosts.length > 0 ? <>
+                    {todayPosts.map((post: any, i: number) => {
+                      const fkey = `${currentWeekNum}|${(currentWeekNum-1)*7 + todayDayNum}|${post.slot}`;
+                      return <PostCard key={i} post={post} fkey={fkey} wn={currentWeekNum} day={(currentWeekNum-1)*7 + todayDayNum} copiedKey={copiedKey} openFeedback={openFeedback} feedback={feedback} platforms={form.platforms} onCopy={copyPost} onFeedbackToggle={setOpenFeedback} onFeedbackUpdate={updateFeedback} onProduction={(hook) => { setPreSelectedHook(hook); setActiveNav("audiens"); }} />;
+                    })}
+                  </> : <div className="rounded-xl bg-muted/30 p-6 text-center">
+                    <p className="text-sm text-muted-foreground">{currentWeekData ? "Semua konten hari ini sudah selesai!" : "Generate minggu ini dulu di tab Konten."}</p>
+                    {!currentWeekData && <button onClick={() => setActiveNav("konten")} className="mt-3 text-xs text-primary font-medium">Buka Tab Konten →</button>}
+                  </div>}
+                </div>
+
+                {/* Progress bar - simple */}
+                <div className="rounded-xl bg-white p-4 border border-border/40">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs font-semibold">Minggu {completedWeeks} dari {totalWeeksAvailable}</p>
+                    <p className="text-xs font-bold text-primary">{progressPct}%</p>
+                  </div>
+                  <div className="h-2 rounded-full bg-muted overflow-hidden">
+                    <div className="h-full rounded-full bg-gradient-to-r from-primary to-violet-500 transition-all" style={{ width: `${progressPct}%` }} />
+                  </div>
+                </div>
+
+                {/* CTA Cards */}
+                <div className="space-y-3">
+                  <button onClick={() => setActiveNav("analitik")} className="w-full rounded-xl bg-white p-5 border border-border/40 text-left hover:border-primary/30 transition flex items-center gap-4">
+                    <BarChart3 className="h-8 w-8 text-primary shrink-0" />
+                    <div>
+                      <p className="text-base font-bold">Mau Baca Hasil Ngontenmu?</p>
+                      <p className="text-xs text-muted-foreground">Lihat mana yang laris, mana yang sepi.</p>
+                    </div>
+                    <ChevronRight className="h-5 w-5 text-muted-foreground/50 ml-auto shrink-0" />
+                  </button>
+
+                  <button onClick={() => setActiveNav("audiens")} className="w-full rounded-xl bg-white p-5 border border-border/40 text-left hover:border-violet-300 transition flex items-center gap-4">
+                    <Sparkles className="h-8 w-8 text-violet-500 shrink-0" />
+                    <div>
+                      <p className="text-base font-bold">Mau Ciptakan Gambar?</p>
+                      <p className="text-xs text-muted-foreground">Upload foto → AI bikin jadi cantik.</p>
+                    </div>
+                    <ChevronRight className="h-5 w-5 text-muted-foreground/50 ml-auto shrink-0" />
+                  </button>
+                </div>
 
                 {/* Consistency reminder */}
                 <div className="rounded-xl bg-amber-50 border border-amber-200/50 p-4">
-                  <div className="flex items-start gap-3">
-                    <span className="text-lg">⚡</span>
-                    <div>
-                      <p className="text-xs font-bold text-amber-900">WAJIB posting konsisten & kasih feedback</p>
-                      <p className="text-[10px] text-amber-800/80 mt-1">Track setiap konten setelah posting. Data feedback menentukan konten mana yang bagus & jelek — AI akan belajar dari pattern-mu.</p>
-                    </div>
-                  </div>
+                  <p className="text-xs font-bold text-amber-900">⚡ Jangan lupa kasih feedback setelah posting!</p>
+                  <p className="text-[10px] text-amber-800/80 mt-1">Klik Track di setiap konten. AI belajar dari data kamu.</p>
                 </div>
               </>;
             })()}
-
-            {/* Streak + Total */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="rounded-xl bg-white p-4 border border-border/40">
-                <div className="flex items-center justify-between mb-2">
-                  <Target className="h-4 w-4 text-amber-500" />
-                  <span className="text-[9px] text-muted-foreground uppercase tracking-wide">Hari ini</span>
-                </div>
-                <p className="text-2xl font-bold">{Object.values(feedback).filter(f => f.posted_at && new Date(f.posted_at).toDateString() === new Date().toDateString()).length}<span className="text-sm font-normal text-muted-foreground">/{form.postsPerDay}</span></p>
-                <p className="text-[10px] text-muted-foreground mt-0.5">Konten ter-track</p>
-              </div>
-              <div className="rounded-xl bg-white p-4 border border-border/40">
-                <div className="flex items-center justify-between mb-2">
-                  <Rocket className="h-4 w-4 text-violet-500" />
-                  <span className="text-[9px] text-muted-foreground uppercase tracking-wide">Total</span>
-                </div>
-                <p className="text-2xl font-bold">{Object.values(feedback).filter(f => f.posted_at).length}</p>
-                <p className="text-[10px] text-muted-foreground mt-0.5">Konten posted</p>
-              </div>
-            </div>
-
-            {/* Performa - clean grid */}
-            <div className={`rounded-xl bg-white p-4 border border-border/40 cursor-pointer hover:border-primary/30 transition ${userPlan === "free" ? "opacity-60" : ""}`} onClick={() => setActiveNav("analitik")}>
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2"><BarChart3 className="h-4 w-4 text-primary" /><p className="text-xs font-semibold">Performa Total</p></div>
-                <div className="flex items-center gap-1">
-                  {userPlan === "free" && <span className="text-[9px] font-medium text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">PRO</span>}
-                  <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50" />
-                </div>
-              </div>
-              <div className="grid grid-cols-4 gap-2">
-                <div className="text-center"><Heart className="h-4 w-4 text-rose-400 mx-auto mb-1" /><p className="text-base font-bold">{totalLikes}</p><p className="text-[9px] text-muted-foreground">Likes</p></div>
-                <div className="text-center"><Eye className="h-4 w-4 text-blue-400 mx-auto mb-1" /><p className="text-base font-bold">{totalReach > 0 ? `${(totalReach/1000).toFixed(1)}K` : "—"}</p><p className="text-[9px] text-muted-foreground">Reach</p></div>
-                <div className="text-center"><Send className="h-4 w-4 text-violet-400 mx-auto mb-1" /><p className="text-base font-bold">{totalDM}</p><p className="text-[9px] text-muted-foreground">DM</p></div>
-                <div className="text-center"><ShoppingCart className="h-4 w-4 text-emerald-400 mx-auto mb-1" /><p className="text-base font-bold">{totalConversions}</p><p className="text-[9px] text-muted-foreground">Konversi</p></div>
-              </div>
-            </div>
-
-            {/* Progress with CTA */}
-            <div className="rounded-xl bg-white p-4 border border-border/40">
-              <div className="flex items-center gap-4 mb-3">
-                <div className="relative h-14 w-14 shrink-0">
-                  <svg className="h-14 w-14 -rotate-90"><circle cx="28" cy="28" r="24" fill="none" stroke="#f3f4f6" strokeWidth="4" /><circle cx="28" cy="28" r="24" fill="none" stroke="hsl(var(--primary))" strokeWidth="4" strokeDasharray={`${progressPct * 1.51} 151`} strokeLinecap="round" /></svg>
-                  <span className="absolute inset-0 flex items-center justify-center text-xs font-bold">{progressPct}%</span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold">{completedWeeks} / {totalWeeksAvailable} minggu</p>
-                  <p className="text-[10px] text-muted-foreground">{progressPct < 100 ? `${totalWeeksAvailable - completedWeeks} minggu lagi menuju akhir` : "Roadmap selesai!"}</p>
-                </div>
-              </div>
-              <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-                <div className="h-full rounded-full bg-gradient-to-r from-primary to-violet-500 transition-all" style={{ width: `${progressPct}%` }} />
-              </div>
-              {completedWeeks < totalWeeksAvailable && <button onClick={() => setActiveNav("konten")} className="w-full mt-3 text-[11px] text-primary font-medium flex items-center justify-center gap-1 hover:underline">Lanjut ke minggu {completedWeeks + 1} <ChevronRight className="h-3 w-3" /></button>}
-            </div>
           </>}
 
           {/* Phases - clean */}
@@ -400,15 +375,6 @@ export default function DashboardPage() {
             );
           })}
           </>}
-
-          {/* Progress ring */}
-          {activeNav === "home" && <Card className="p-5 flex items-center justify-between">
-            <div><p className="text-sm font-semibold">Progress Keseluruhan</p><p className="text-xs text-muted-foreground">{completedWeeks} dari {totalWeeksAvailable} minggu selesai</p></div>
-            <div className="relative flex h-16 w-16 items-center justify-center">
-              <svg className="h-16 w-16 -rotate-90"><circle cx="32" cy="32" r="26" fill="none" stroke="#f3f4f6" strokeWidth="5" /><circle cx="32" cy="32" r="26" fill="none" stroke="hsl(var(--primary))" strokeWidth="5" strokeDasharray={`${progressPct * 1.63} 163`} strokeLinecap="round" /></svg>
-              <span className="absolute text-sm font-bold">{progressPct}%</span>
-            </div>
-          </Card>}
 
           {/* AI Production Store (Business) */}
           {activeNav === "audiens" && <AudiensView niche={form.niche} audience={form.audience} platform={form.platform} userPlan={userPlan} weeks={weeks} preSelectedHook={preSelectedHook} />}
