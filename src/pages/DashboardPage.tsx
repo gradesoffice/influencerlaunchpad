@@ -341,8 +341,16 @@ export default function DashboardPage() {
                       return <PostCard key={i} post={post} fkey={fkey} wn={targetWeek} day={targetDayNum} copiedKey={copiedKey} openFeedback={openFeedback} feedback={feedback} platforms={form.platforms} onCopy={copyPost} onFeedbackToggle={setOpenFeedback} onFeedbackUpdate={updateFeedback} onProduction={(hook) => { setPreSelectedHook(hook); setActiveNav("audiens"); }} />;
                     })}
                   </> : <div className="rounded-xl bg-muted/30 p-6 text-center">
-                    <p className="text-sm text-muted-foreground">{currentWeekData ? "Semua konten hari ini sudah selesai! 🎉" : "Belum ada konten. Generate dulu di tab Konten."}</p>
-                    {!currentWeekData && <button onClick={() => setActiveNav("konten")} className="mt-3 text-xs text-primary font-medium">Buka Tab Konten →</button>}
+                    <p className="text-sm text-muted-foreground mb-4">{Object.keys(weeks).length > 0 ? "Semua konten sudah selesai! 🎉" : "Belum ada konten. Klik tombol di bawah untuk generate."}</p>
+                    {Object.keys(weeks).length === 0 && strategy && (() => {
+                      const firstPhase = strategy.phases[0];
+                      const firstTheme = firstPhase?.weeklyThemes?.[0] || "";
+                      return <Button onClick={() => generateWeek(1, firstPhase?.name || "", firstTheme)} disabled={loadingWeek === 1} className="h-11 text-sm font-bold text-primary-foreground px-6" style={{ background: "var(--gradient-hero)" }}>
+                        {loadingWeek === 1 ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Sparkles className="h-4 w-4 mr-2" />}
+                        Generate Konten Minggu 1
+                      </Button>;
+                    })()}
+                    {Object.keys(weeks).length === 0 && !strategy && <Button onClick={() => setShowForm(true)} className="h-11 text-sm font-bold text-primary-foreground px-6" style={{ background: "var(--gradient-hero)" }}><Sparkles className="h-4 w-4 mr-2" />Buat Strategi Dulu</Button>}
                   </div>}
                 </div>
 
