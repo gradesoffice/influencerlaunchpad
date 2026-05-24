@@ -184,10 +184,9 @@ export default function DashboardPage() {
         <nav className="space-y-2 flex-1">
           <SideIcon icon={<Home className="h-5 w-5" />} active={activeNav === "home"} onClick={() => setActiveNav("home")} tooltip="Overview" />
           <SideIcon icon={<FileText className="h-5 w-5" />} active={activeNav === "konten"} onClick={() => setActiveNav("konten")} tooltip="Konten" />
-          <SideIcon icon={<BarChart3 className="h-5 w-5" />} active={activeNav === "analitik"} onClick={() => tryProFeature("analitik")} tooltip="Analitik" locked={userPlan === "free"} />
-          <SideIcon icon={<Sparkles className="h-5 w-5" />} active={activeNav === "audiens"} onClick={() => tryProFeature("audiens")} tooltip="Production" locked={userPlan === "free"} />
-          <SideIcon icon={<Gauge className="h-5 w-5" />} active={activeNav === "kpi"} onClick={() => tryProFeature("kpi")} tooltip="KPI" locked={userPlan === "free"} />
-          <SideIcon icon={<Lightbulb className="h-5 w-5" />} active={activeNav === "insight"} onClick={() => tryProFeature("insight")} tooltip="Insight" locked={userPlan === "free"} />
+          <SideIcon icon={<BarChart3 className="h-5 w-5" />} active={activeNav === "analitik"} onClick={() => tryProFeature("analitik")} tooltip="Laporan" locked={userPlan === "free"} />
+          <SideIcon icon={<Sparkles className="h-5 w-5" />} active={activeNav === "audiens"} onClick={() => tryProFeature("audiens")} tooltip="Bikin Foto" locked={userPlan === "free"} />
+          <SideIcon icon={<Lightbulb className="h-5 w-5" />} active={activeNav === "insight"} onClick={() => tryProFeature("insight")} tooltip="Saran AI" locked={userPlan === "free"} />
         </nav>
         <div className="space-y-3 mt-4 pt-4 border-t border-border">
           <SideIcon icon={<Crown className="h-5 w-5 text-amber-500" />} active={false} onClick={() => setShowPricing(true)} tooltip="Upgrade" />
@@ -413,9 +412,6 @@ export default function DashboardPage() {
 
           {/* AI Production Store (Business) */}
           {activeNav === "audiens" && <AudiensView niche={form.niche} audience={form.audience} platform={form.platform} userPlan={userPlan} weeks={weeks} preSelectedHook={preSelectedHook} />}
-
-          {/* KPI Tracker View (Pro) */}
-          {activeNav === "kpi" && <KPIView feedback={fbVals} totalWeeks={completedWeeks} />}
 
           {/* Insight View (Pro) */}
           {activeNav === "insight" && <InsightView feedback={fbVals} weeks={weeks} weekData={Object.values(weeks)} niche={form.niche} platform={form.platform} brandPainPoints={(strategy?.brand as any)?.painPoints || []} />}
@@ -670,11 +666,11 @@ function AudiensView({ niche, audience, platform, userPlan, weeks, preSelectedHo
   if (userPlan !== "business") {
     return (
       <div className="space-y-4">
-        <h2 className="text-lg font-bold flex items-center gap-2"><Sparkles className="h-5 w-5 text-violet-500" />AI Production Store</h2>
+        <h2 className="text-xl font-bold">Bikin Foto Konten</h2>
         <Card className="p-8 text-center border-border/40">
           <div className="mx-auto h-14 w-14 rounded-full bg-violet-50 flex items-center justify-center mb-4"><Crown className="h-6 w-6 text-violet-500" /></div>
-          <h3 className="text-sm font-bold mb-1">Business Plan Only</h3>
-          <p className="text-xs text-muted-foreground mb-4">Upload foto mentah → AI ubah jadi konten cantik dengan hook terbaik.</p>
+          <h3 className="text-sm font-bold mb-1">Khusus Business Plan</h3>
+          <p className="text-xs text-muted-foreground mb-4">Upload foto apa aja → AI bikin jadi gambar cantik siap posting.</p>
           <div className="space-y-2 mb-5 text-[11px] text-left max-w-xs mx-auto">
             <div className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-emerald-500" /><span>3 gambar gratis/hari</span></div>
             <div className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-emerald-500" /><span>AI aesthetic level ChatGPT</span></div>
@@ -691,12 +687,12 @@ function AudiensView({ niche, audience, platform, userPlan, weeks, preSelectedHo
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-bold flex items-center gap-2"><Sparkles className="h-5 w-5 text-violet-500" />AI Production Store</h2>
+        <h2 className="text-xl font-bold">Bikin Foto Konten</h2>
         <span className="text-[10px] text-muted-foreground">{usedToday}/3 hari ini</span>
       </div>
 
       <Card className="p-4 border-border/40">
-        <p className="text-xs text-muted-foreground mb-3">Upload foto mentah → pilih hook → AI generate gambar cantik siap post.</p>
+        <p className="text-xs text-muted-foreground mb-3">Upload foto apa aja → pilih kalimat hook → AI bikin jadi cantik → download.</p>
 
         {/* Upload */}
         <div className="mb-3">
@@ -957,12 +953,13 @@ function InsightView({ feedback, weekData, niche, platform, brandPainPoints }: {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-lg font-bold flex items-center gap-2"><Lightbulb className="h-5 w-5 text-amber-500" />AI Insight</h2>
+      <h2 className="text-xl font-bold">Saran AI Untuk Kamu</h2>
+      <p className="text-xs text-muted-foreground -mt-2">AI sudah analisis kontenmu. Ini yang perlu kamu tahu.</p>
 
       {/* AI Trend Forecast */}
       <Card className="p-4 border-border/40">
         <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2"><Sparkles className="h-4 w-4 text-violet-500" /><p className="text-xs font-semibold">AI Trend Forecast</p></div>
+          <div className="flex items-center gap-2"><Sparkles className="h-4 w-4 text-violet-500" /><p className="text-sm font-bold">Tren Bulan Ini</p></div>
           <Button variant="outline" size="sm" className="h-7 text-[10px]" onClick={fetchTrends} disabled={loadingTrends}>{loadingTrends ? <Loader2 className="h-3 w-3 animate-spin" /> : trends ? "Refresh" : "Generate"}</Button>
         </div>
         {trends?.trends ? <div className="space-y-2">
@@ -984,10 +981,10 @@ function InsightView({ feedback, weekData, niche, platform, brandPainPoints }: {
       {/* AI Content Doctor */}
       <Card className="p-4 border-border/40">
         <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2"><Activity className="h-4 w-4 text-rose-500" /><p className="text-xs font-semibold">Content Doctor</p></div>
+          <div className="flex items-center gap-2"><Activity className="h-4 w-4 text-rose-500" /><p className="text-sm font-bold">Perbaiki Konten Jelek</p></div>
           <Button variant="outline" size="sm" className="h-7 text-[10px]" onClick={runDoctor} disabled={loadingDoctor}>{loadingDoctor ? <Loader2 className="h-3 w-3 animate-spin" /> : "Diagnosa"}</Button>
         </div>
-        <p className="text-[10px] text-muted-foreground mb-2">AI analisis konten terburuk-mu & kasih fix otomatis.</p>
+        <p className="text-[10px] text-muted-foreground mb-2">Klik Diagnosa → AI cari tahu kenapa kontenmu sepi & kasih solusi.</p>
         {doctorResult && <div className="space-y-2">
           <div className="rounded-lg bg-rose-50 p-2.5"><p className="text-[10px] text-rose-800 font-semibold uppercase tracking-wide mb-1">Diagnosis</p><p className="text-[11px] text-rose-700">{doctorResult.diagnosis}</p></div>
           {doctorResult.issues?.length > 0 && <div className="rounded-lg bg-amber-50 p-2.5"><p className="text-[10px] text-amber-800 font-semibold uppercase tracking-wide mb-1">Issues</p>{doctorResult.issues.map((iss: string, i: number) => <p key={i} className="text-[10px] text-amber-700">• {iss}</p>)}</div>}
@@ -1046,8 +1043,8 @@ function InsightView({ feedback, weekData, niche, platform, brandPainPoints }: {
       })()}
 
       {/* Recommendations */}
-      <Card className="p-4 space-y-2">
-        <p className="text-xs font-semibold uppercase text-muted-foreground mb-2">🧠 Rekomendasi AI</p>
+      <Card className="p-4 space-y-2 border-border/40">
+        <p className="text-sm font-bold mb-2">Yang Harus Kamu Lakukan</p>
         {recommendations.map((r, i) => (
           <div key={i} className={`rounded-lg p-3 ${r.type === "success" ? "bg-emerald-50" : r.type === "warning" ? "bg-amber-50" : "bg-blue-50"}`}>
             <p className={`text-xs ${r.type === "success" ? "text-emerald-800" : r.type === "warning" ? "text-amber-800" : "text-blue-800"}`}>{r.emoji} {r.text}</p>
@@ -1057,14 +1054,14 @@ function InsightView({ feedback, weekData, niche, platform, brandPainPoints }: {
 
       {/* Do's & Don'ts */}
       <div className="grid grid-cols-2 gap-3">
-        <Card className="p-4"><p className="text-xs font-semibold text-emerald-600 mb-2">✅ Do's</p>{dos.map((d, i) => <p key={i} className="text-[11px] text-muted-foreground mb-1">• {d}</p>)}</Card>
-        <Card className="p-4"><p className="text-xs font-semibold text-rose-600 mb-2">❌ Don'ts</p>{donts.map((d, i) => <p key={i} className="text-[11px] text-muted-foreground mb-1">• {d}</p>)}</Card>
+        <Card className="p-4 border-border/40"><p className="text-sm font-bold text-emerald-600 mb-2">Lakukan ✓</p>{dos.map((d, i) => <p key={i} className="text-[11px] text-muted-foreground mb-1.5">• {d}</p>)}</Card>
+        <Card className="p-4 border-border/40"><p className="text-sm font-bold text-rose-600 mb-2">Jangan ✗</p>{donts.map((d, i) => <p key={i} className="text-[11px] text-muted-foreground mb-1.5">• {d}</p>)}</Card>
       </div>
 
       {/* Pain Points */}
       <Card className="p-4 border-border/40">
-        <div className="flex items-center gap-2 mb-3"><Target className="h-4 w-4 text-rose-500" /><p className="text-xs font-semibold">Pain Points Audiens</p></div>
-        <p className="text-[10px] text-muted-foreground mb-3">AI generate berdasarkan niche & audiens brand-mu. Dipakai sebagai dasar hook & caption konten harian.</p>
+        <p className="text-sm font-bold mb-1">Masalah Audiens Kamu</p>
+        <p className="text-[10px] text-muted-foreground mb-3">Ini yang bikin audiens kamu galau. Pakai di konten biar mereka merasa "ini gue banget!"</p>
         <div className="grid grid-cols-1 gap-1.5">
           {painPoints.map((p, i) => (
             <div key={i} className="flex items-start gap-2 rounded-lg bg-rose-50/30 px-3 py-2">
