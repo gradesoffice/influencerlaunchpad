@@ -241,20 +241,71 @@ export default function DashboardPage() {
 
           {/* HOME VIEW */}
           {activeNav === "home" && <>
-            {/* Dynamic greeting + motivational status */}
-            <div className="rounded-xl bg-gradient-to-br from-primary/5 via-violet-50 to-amber-50/50 p-5 border border-border/40">
-              <p className="text-[10px] uppercase tracking-widest text-primary font-semibold mb-1">{(() => { const h = new Date().getHours(); return h < 11 ? "Selamat pagi" : h < 15 ? "Selamat siang" : h < 19 ? "Selamat sore" : "Selamat malam"; })()}</p>
-              <h2 className="text-xl font-bold leading-tight">{(() => {
-                if (completedWeeks === 0) return "Yuk mulai perjalananmu hari ini.";
-                if (progressPct < 25) return "Setiap konten adalah langkah maju.";
-                if (progressPct < 50) return "Momentum mulai terbentuk. Pertahankan.";
-                if (progressPct < 75) return "Kamu sudah lebih dari setengah jalan.";
-                return "Tinggal sedikit lagi menuju akhir roadmap.";
-              })()}</h2>
-              <p className="text-xs text-muted-foreground mt-2">{Object.values(feedback).filter(f => f.posted_at && new Date(f.posted_at).toDateString() === new Date().toDateString()).length > 0 ? `${Object.values(feedback).filter(f => f.posted_at && new Date(f.posted_at).toDateString() === new Date().toDateString()).length} konten sudah ter-track hari ini ✨` : "Belum ada konten ter-track hari ini. Mari produktif!"}</p>
-            </div>
+            {/* Dynamic greeting with today's mission from roadmap */}
+            {(() => {
+              const hour = new Date().getHours();
+              const greeting = hour < 11 ? "SELAMAT PAGI" : hour < 15 ? "SELAMAT SIANG" : hour < 19 ? "SELAMAT SORE" : "SELAMAT MALAM";
+              
+              // Find current phase & week theme
+              let currentPhase = "";
+              let currentTheme = "";
+              let currentWeekNum = completedWeeks + 1;
+              let phaseObjective = "";
+              if (strategy) {
+                let offset = 0;
+                for (const phase of strategy.phases) {
+                  for (const theme of phase.weeklyThemes) {
+                    offset++;
+                    if (offset === currentWeekNum) { currentPhase = phase.name; currentTheme = theme; phaseObjective = phase.objective; break; }
+                  }
+                  if (currentTheme) break;
+                }
+              }
 
-            {/* Streak + Today's target */}
+              // Find today's posts from current week
+              const currentWeekData = weeks[currentWeekNum];
+              const todayDayNum = currentWeekData ? ((new Date().getDay() || 7)) : 0; // 1=Mon...7=Sun
+              const todayPosts = currentWeekData?.days?.find((d: any) => {
+                const dayInWeek = d.day - (currentWeekNum - 1) * 7;
+                return dayInWeek === todayDayNum;
+              })?.posts || [];
+
+              return <>
+                <div className="rounded-xl bg-gradient-to-br from-primary/5 via-violet-50 to-amber-50/30 p-5 border border-border/40">
+                  <p className="text-[10px] uppercase tracking-widest text-primary font-bold mb-2">{greeting}</p>
+                  {currentTheme ? <>
+                    <h2 className="text-lg font-bold leading-snug">Hari ini kita akan <span className="text-primary">{phaseObjective || currentPhase}</span></h2>
+                    <p className="text-xs text-muted-foreground mt-2">melalui <strong>{currentTheme}</strong></p>
+                  </> : <>
+                    <h2 className="text-lg font-bold leading-snug">Setiap konten adalah langkah maju.</h2>
+                    <p className="text-xs text-muted-foreground mt-2">Generate minggu berikutnya untuk lihat misi hari ini.</p>
+                  </>}
+                </div>
+
+                {/* Today's posts */}
+                {todayPosts.length > 0 && <div className="space-y-2">
+                  <p className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold">Konten hari ini · Day {todayDayNum}</p>
+                  {todayPosts.map((post: any, i: number) => {
+                    const fkey = `${currentWeekNum}|${(currentWeekNum-1)*7 + todayDayNum}|${post.slot}`;
+                    return <PostCard key={i} post={post} fkey={fkey} wn={currentWeekNum} day={(currentWeekNum-1)*7 + todayDayNum} copiedKey={copiedKey} openFeedback={openFeedback} feedback={feedback} platforms={form.platforms} onCopy={copyPost} onFeedbackToggle={setOpenFeedback} onFeedbackUpdate={updateFeedback} onProduction={(hook) => { setPreSelectedHook(hook); setActiveNav("audiens"); }} />;
+                  })}
+                  <p className="text-[10px] text-muted-foreground italic text-center pt-1">Selesaikan postingan 1 dulu sebelum lanjut ke berikutnya.</p>
+                </div>}
+
+                {/* Consistency reminder */}
+                <div className="rounded-xl bg-amber-50 border border-amber-200/50 p-4">
+                  <div className="flex items-start gap-3">
+                    <span className="text-lg">⚡</span>
+                    <div>
+                      <p className="text-xs font-bold text-amber-900">WAJIB posting konsisten & kasih feedback</p>
+                      <p className="text-[10px] text-amber-800/80 mt-1">Track setiap konten setelah posting. Data feedback menentukan konten mana yang bagus & jelek — AI akan belajar dari pattern-mu.</p>
+                    </div>
+                  </div>
+                </div>
+              </>;
+            })()}
+
+            {/* Streak + Total */}
             <div className="grid grid-cols-2 gap-3">
               <div className="rounded-xl bg-white p-4 border border-border/40">
                 <div className="flex items-center justify-between mb-2">
