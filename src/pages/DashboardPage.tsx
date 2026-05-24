@@ -197,7 +197,7 @@ export default function DashboardPage() {
 
       {/* Main */}
       <main className="flex-1 p-4 md:p-8 overflow-y-auto">
-        <div className="max-w-4xl mx-auto space-y-6">
+        <div className="max-w-4xl mx-auto space-y-6 pb-28">
           {/* Header - minimal */}
           <div className="flex items-center justify-between pb-1">
             <div className="flex items-center gap-2.5">
@@ -451,7 +451,7 @@ export default function DashboardPage() {
           <button onClick={() => tryProFeature("insight")} className={`p-2 rounded-xl transition ${activeNav === "insight" ? "text-primary bg-primary/10" : "text-muted-foreground"}`}><Lightbulb className="h-5 w-5" /></button>
         </div>
       </div>
-      <div className="md:hidden h-32" />
+      <div className="md:hidden h-40" />
 
       {/* Paywall Card */}
       {showPaywall && <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
