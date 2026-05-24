@@ -259,33 +259,54 @@ export default function DashboardPage() {
                 }
               }
 
-              // Find today's posts - check current week first, fallback to latest available week
+              // Find today's posts - sequential logic: find the NEXT uncompleted day
+              // Start from day 1, find the first day where not all posts have feedback
               const availableWeekNums = Object.keys(weeks).map(Number).sort((a, b) => a - b);
-              const targetWeek = weeks[currentWeekNum] ? currentWeekNum : availableWeekNums[availableWeekNums.length - 1] || 0;
-              const currentWeekData = weeks[targetWeek];
-              const todayDayOfWeek = new Date().getDay() || 7; // 1=Mon...7=Sun
-              
-              // Find today's day in the week data
               let todayPosts: any[] = [];
-              if (currentWeekData?.days) {
-                // Try to match by day-of-week position
-                const dayIndex = Math.min(todayDayOfWeek - 1, currentWeekData.days.length - 1);
-                todayPosts = currentWeekData.days[dayIndex]?.posts || [];
-                // If no posts found, just show first day that has posts
-                if (todayPosts.length === 0) {
-                  const firstDayWithPosts = currentWeekData.days.find((d: any) => d.posts?.length > 0);
-                  todayPosts = firstDayWithPosts?.posts || [];
+              let targetWeek = 0;
+              let targetDayNum = 1;
+              
+              // Go through weeks sequentially, find first day with incomplete posts
+              for (const wn of availableWeekNums) {
+                const wData = weeks[wn];
+                if (!wData?.days) continue;
+                let found = false;
+                for (const day of wData.days) {
+                  if (!day?.posts?.length) continue;
+                  // Check if ALL posts in this day have feedback
+                  const allDone = day.posts.every((p: any) => {
+                    const fkey = `${wn}|${day.day}|${p.slot}`;
+                    return Object.keys(feedback).some(k => k.startsWith(fkey));
+                  });
+                  if (!allDone) {
+                    todayPosts = day.posts;
+                    targetWeek = wn;
+                    targetDayNum = day.day;
+                    found = true;
+                    break;
+                  }
+                }
+                if (found) break;
+              }
+              
+              // If all done, show last day's posts with congrats
+              if (todayPosts.length === 0 && availableWeekNums.length > 0) {
+                const lastWeek = weeks[availableWeekNums[availableWeekNums.length - 1]];
+                if (lastWeek?.days?.length) {
+                  const lastDay = lastWeek.days[lastWeek.days.length - 1];
+                  todayPosts = lastDay?.posts || [];
+                  targetWeek = availableWeekNums[availableWeekNums.length - 1];
+                  targetDayNum = lastDay?.day || 1;
                 }
               }
+              const currentWeekData = weeks[targetWeek];
 
               // Check which posts are "completed" (has feedback)
               const isPostDone = (idx: number) => {
                 if (idx < 0 || idx >= todayPosts.length) return false;
                 const post = todayPosts[idx];
-                const dayNum = currentWeekData?.days?.find((d: any) => d.posts?.includes(post))?.day || 1;
-                const fkey = `${targetWeek}|${dayNum}|${post.slot}`;
-                const hasFb = Object.keys(feedback).some(k => k.startsWith(fkey));
-                return hasFb;
+                const fkey = `${targetWeek}|${targetDayNum}|${post.slot}`;
+                return Object.keys(feedback).some(k => k.startsWith(fkey));
               };
 
               return <>
@@ -305,8 +326,7 @@ export default function DashboardPage() {
                   
                   {todayPosts.length > 0 ? <>
                     {todayPosts.map((post: any, i: number) => {
-                      const dayNum = currentWeekData?.days?.find((d: any) => d.posts?.includes(post))?.day || 1;
-                      const fkey = `${targetWeek}|${dayNum}|${post.slot}`;
+                      const fkey = `${targetWeek}|${targetDayNum}|${post.slot}`;
                       const prevDone = i === 0 ? true : isPostDone(i - 1);
                       const isLocked = !prevDone;
 
@@ -318,7 +338,7 @@ export default function DashboardPage() {
                         </div>;
                       }
 
-                      return <PostCard key={i} post={post} fkey={fkey} wn={targetWeek} day={dayNum} copiedKey={copiedKey} openFeedback={openFeedback} feedback={feedback} platforms={form.platforms} onCopy={copyPost} onFeedbackToggle={setOpenFeedback} onFeedbackUpdate={updateFeedback} onProduction={(hook) => { setPreSelectedHook(hook); setActiveNav("audiens"); }} />;
+                      return <PostCard key={i} post={post} fkey={fkey} wn={targetWeek} day={targetDayNum} copiedKey={copiedKey} openFeedback={openFeedback} feedback={feedback} platforms={form.platforms} onCopy={copyPost} onFeedbackToggle={setOpenFeedback} onFeedbackUpdate={updateFeedback} onProduction={(hook) => { setPreSelectedHook(hook); setActiveNav("audiens"); }} />;
                     })}
                   </> : <div className="rounded-xl bg-muted/30 p-6 text-center">
                     <p className="text-sm text-muted-foreground">{currentWeekData ? "Semua konten hari ini sudah selesai! 🎉" : "Belum ada konten. Generate dulu di tab Konten."}</p>
@@ -431,7 +451,7 @@ export default function DashboardPage() {
           <button onClick={() => tryProFeature("insight")} className={`p-2 rounded-xl transition ${activeNav === "insight" ? "text-primary bg-primary/10" : "text-muted-foreground"}`}><Lightbulb className="h-5 w-5" /></button>
         </div>
       </div>
-      <div className="md:hidden h-24" />
+      <div className="md:hidden h-32" />
 
       {/* Paywall Card */}
       {showPaywall && <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
