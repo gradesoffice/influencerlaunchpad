@@ -122,6 +122,13 @@ export default function AdminPage() {
             {users.length === 0 && <p className="text-xs text-muted-foreground italic">Belum ada user.</p>}
           </div>
         </Card>
+
+        {/* Add Image Credits */}
+        <Card className="p-5">
+          <h2 className="text-sm font-semibold mb-3">🎨 Tambah Image Credits</h2>
+          <p className="text-xs text-muted-foreground mb-3">User bayar credit → paste user_id → pilih paket → klik tambah.</p>
+          <AddCredits processing={processing} />
+        </Card>
       </div>
     </div>
   );
@@ -141,6 +148,54 @@ function QuickApprove({ onApprove, processing }: { onApprove: (userId: string, p
       <Button size="sm" className="h-9" onClick={() => { if (userId.trim()) onApprove(userId.trim(), plan); }} disabled={!userId.trim() || processing === userId}>
         {processing === userId ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-4 w-4" />}
       </Button>
+    </div>
+  );
+}
+
+function AddCredits({ processing }: { processing: string | null }) {
+  const [userId, setUserId] = useState("");
+  const [credits, setCredits] = useState("10");
+  const [adding, setAdding] = useState(false);
+
+  const addCredits = async () => {
+    if (!userId.trim()) return;
+    setAdding(true);
+    try {
+      const amount = parseInt(credits);
+      // Upsert: if user exists, add to existing credits. If not, create with amount.
+      const { data: existing } = await (supabase.from("image_credits") as any).select("credits").eq("user_id", userId.trim()).single();
+      
+      if (existing) {
+        await (supabase.from("image_credits") as any).update({ credits: existing.credits + amount, updated_at: new Date().toISOString() }).eq("user_id", userId.trim());
+      } else {
+        await (supabase.from("image_credits") as any).insert({ user_id: userId.trim(), credits: amount });
+      }
+      
+      toast.success(`+${amount} credits ditambahkan!`);
+      setUserId("");
+    } catch (e) {
+      toast.error("Gagal tambah credit");
+      console.error(e);
+    }
+    setAdding(false);
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="flex gap-2">
+        <input value={userId} onChange={e => setUserId(e.target.value)} placeholder="user_id (UUID)" className="flex-1 h-9 rounded-md border border-input bg-background px-3 text-xs" />
+        <select value={credits} onChange={e => setCredits(e.target.value)} className="h-9 rounded-md border border-input bg-background px-2 text-xs">
+          <option value="10">+10 (Rp 18rb)</option>
+          <option value="30">+30 (Rp 39rb)</option>
+          <option value="50">+50 (Rp 59rb)</option>
+          <option value="5">+5 (custom)</option>
+          <option value="100">+100 (custom)</option>
+        </select>
+        <Button size="sm" className="h-9 bg-violet-600 hover:bg-violet-700" onClick={addCredits} disabled={!userId.trim() || adding}>
+          {adding ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-4 w-4" />}
+        </Button>
+      </div>
+      <p className="text-[10px] text-muted-foreground">Credit ditambahkan ke saldo existing user (tidak replace).</p>
     </div>
   );
 }

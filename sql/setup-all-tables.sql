@@ -124,3 +124,19 @@ INSERT INTO public.promo_codes (code, discount_percent, max_uses) VALUES
   ('EARLY30', 30, 200),
   ('FRIEND20', 20, NULL)
 ON CONFLICT (code) DO NOTHING;
+
+
+-- Image Credits (for AI Production Store)
+CREATE TABLE IF NOT EXISTS image_credits (
+  user_id UUID PRIMARY KEY REFERENCES auth.users(id),
+  credits INTEGER NOT NULL DEFAULT 0,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE image_credits ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can read own credits" ON image_credits
+  FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Service can manage credits" ON image_credits
+  FOR ALL USING (true);
