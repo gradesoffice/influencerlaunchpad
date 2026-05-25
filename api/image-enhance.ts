@@ -39,42 +39,71 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const { hook, imageBase64, size } = req.body;
     if (!hook || !imageBase64) return res.status(400).json({ error: 'Hook dan gambar diperlukan' });
-    if (imageBase64 === 'logged') {
+    if (imageBase64 === 'logged' || imageBase64 === 'placeholder') {
       await db.from('usage_logs').insert({ user_id: user.id, action: 'image_enhance' });
       return res.status(200).json({ success: true, usedToday: usedToday + 1, freeDaily });
     }
 
+    const stabilityKey = process.env.STABILITY_API_KEY;
     const openaiKey = process.env.OPENAI_API_KEY;
-    if (!openaiKey) return res.status(500).json({ error: 'OpenAI API key not configured. Tambahkan OPENAI_API_KEY di Vercel env.' });
+    let imageUrl: string | null = null;
 
-    const imageSize = size === '1024x1024' ? '1024x1024' : '1024x1792';
+    // Stability AI - Image to Image (enhance whole photo, keep subject intact)
+    if (stabilityKey) {
+      try {
+        const base64Data = imageBase64.replace(/^data:image\/\w+;base64,/, '');
+        const imageBuffer = Buffer.from(base64Data, 'base64');
 
-    // Use GPT Image 1 (gpt-image-1) to generate aesthetic IG story with hook
-    const dalleRes = await fetch('https://api.openai.com/v1/images/generations', {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${openaiKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'gpt-image-1',
-        prompt: `Create a stunning, professional Instagram ${imageSize === '1024x1792' ? 'story (portrait)' : 'feed post (square)'} image. Design a beautiful social media content piece with bold, modern typography displaying this hook text: "${hook}". Style: aesthetic, clean gradients, modern design, eye-catching colors. The text "${hook}" must be the focal point - large, bold, readable. Add subtle decorative elements. Make it look like premium social media content from a top influencer. No faces, no photos - pure graphic design with text.`,
-        n: 1,
-        size: imageSize,
-        quality: 'medium',
-      }),
-    });
+        const formData = new FormData();
+        formData.append('image', new Blob([imageBuffer], { type: 'image/png' }), 'input.png');
+        formData.append('prompt', `Enhance this photo to look like a premium Instagram story. Improve colors, lighting, contrast. Make it vibrant and aesthetic. Keep the subject/product EXACTLY the same but make the overall image look professional and eye-catching. Add subtle warm tones, slight vignette, modern social media aesthetic. The image should look like it was shot by a professional photographer for social media.`);
+        formData.append('strength', '0.35'); // Low strength = keep original mostly intact
+        formData.append('output_format', 'png');
 
-    if (!dalleRes.ok) {
-      const err = await dalleRes.json().catch(() => null);
-      console.error('[image-enhance] DALL-E error:', JSON.stringify(err));
-      return res.status(400).json({ error: err?.error?.message || 'Gagal generate gambar. Coba lagi.' });
+        const stabRes = await fetch('https://api.stability.ai/v2beta/stable-image/generate/sd3', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${stabilityKey}`, 'Accept': 'image/*' },
+          body: formData,
+        });
+
+        if (stabRes.ok) {
+          const imgBuffer = Buffer.from(await stabRes.arrayBuffer());
+          imageUrl = `data:image/png;base64,${imgBuffer.toString('base64')}`;
+        } else {
+          const errText = await stabRes.text().catch(() => '');
+          console.error('[image-enhance] Stability error:', stabRes.status, errText);
+        }
+      } catch (e) {
+        console.error('[image-enhance] Stability exception:', e);
+      }
     }
 
-    const dalleData = await dalleRes.json();
-    const imageUrl = dalleData.data?.[0]?.url;
-    if (!imageUrl) return res.status(400).json({ error: 'Tidak ada gambar dihasilkan' });
+    // Fallback to OpenAI if Stability fails
+    if (!imageUrl && openaiKey) {
+      const imageSize = size === '1024x1024' ? '1024x1024' : '1024x1792';
+      const dalleRes = await fetch('https://api.openai.com/v1/images/generations', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${openaiKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'gpt-image-1',
+          prompt: `Create a stunning professional Instagram ${imageSize === '1024x1792' ? 'story (portrait 9:16)' : 'feed post (square 1:1)'} image with bold modern typography: "${hook}". Aesthetic, vibrant colors, clean design. Text must be large, bold, readable. Premium social media content.`,
+          n: 1,
+          size: imageSize,
+          quality: 'medium',
+        }),
+      });
+      if (dalleRes.ok) {
+        const data = await dalleRes.json();
+        imageUrl = data.data?.[0]?.url || null;
+      } else {
+        const err = await dalleRes.json().catch(() => null);
+        console.error('[image-enhance] OpenAI fallback error:', JSON.stringify(err));
+      }
+    }
 
-    // Log usage
+    if (!imageUrl) return res.status(400).json({ error: 'Gagal generate gambar. Coba lagi.' });
+
     await db.from('usage_logs').insert({ user_id: user.id, action: 'image_enhance' });
-
     return res.status(200).json({ image: imageUrl, usedToday: usedToday + 1, freeDaily });
   } catch (e) {
     console.error('[image-enhance]', e);
