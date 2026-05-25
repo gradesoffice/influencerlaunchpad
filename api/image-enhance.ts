@@ -37,7 +37,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       await (db.from('image_credits') as any).update({ credits: credits - 1 }).eq('user_id', user.id);
     }
 
-    const { hook, imageBase64 } = req.body;
+    const { hook, imageBase64, size } = req.body;
     if (!hook || !imageBase64) return res.status(400).json({ error: 'Hook dan gambar diperlukan' });
     if (imageBase64 === 'logged') {
       await db.from('usage_logs').insert({ user_id: user.id, action: 'image_enhance' });
@@ -47,15 +47,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const openaiKey = process.env.OPENAI_API_KEY;
     if (!openaiKey) return res.status(500).json({ error: 'OpenAI API key not configured. Tambahkan OPENAI_API_KEY di Vercel env.' });
 
+    const imageSize = size === '1024x1024' ? '1024x1024' : '1024x1792';
+
     // Use GPT Image 1 (gpt-image-1) to generate aesthetic IG story with hook
     const dalleRes = await fetch('https://api.openai.com/v1/images/generations', {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${openaiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model: 'gpt-image-1',
-        prompt: `Create a stunning, professional Instagram story image (portrait orientation). Design a beautiful social media content piece with bold, modern typography displaying this hook text: "${hook}". Style: aesthetic, clean gradients, modern design, eye-catching colors. The text "${hook}" must be the focal point - large, bold, readable. Add subtle decorative elements. Make it look like premium social media content from a top influencer. No faces, no photos - pure graphic design with text.`,
+        prompt: `Create a stunning, professional Instagram ${imageSize === '1024x1792' ? 'story (portrait)' : 'feed post (square)'} image. Design a beautiful social media content piece with bold, modern typography displaying this hook text: "${hook}". Style: aesthetic, clean gradients, modern design, eye-catching colors. The text "${hook}" must be the focal point - large, bold, readable. Add subtle decorative elements. Make it look like premium social media content from a top influencer. No faces, no photos - pure graphic design with text.`,
         n: 1,
-        size: '1024x1792',
+        size: imageSize,
         quality: 'medium',
       }),
     });

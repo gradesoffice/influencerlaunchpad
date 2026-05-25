@@ -623,6 +623,7 @@ function PL({ text }: { text: string }) { return <div className="flex items-cent
 function AudiensView({ niche, audience, platform, userPlan, weeks, preSelectedHook }: { niche: string; audience: string; platform: string; userPlan: string; weeks: Record<number, WeekPlan>; preSelectedHook?: string }) {
   const [selectedHook, setSelectedHook] = useState(preSelectedHook || "");
   useEffect(() => { if (preSelectedHook) setSelectedHook(preSelectedHook); }, [preSelectedHook]);
+  const [imageSize, setImageSize] = useState<"1024x1792" | "1024x1024">("1024x1792");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [outputImage, setOutputImage] = useState<string | null>(null);
@@ -655,7 +656,7 @@ function AudiensView({ niche, audience, platform, userPlan, weeks, preSelectedHo
       const res = await fetch("/api/image-enhance", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}) },
-        body: JSON.stringify({ hook: selectedHook, imageBase64: imagePreview }),
+        body: JSON.stringify({ hook: selectedHook, imageBase64: imagePreview, size: imageSize }),
       });
       if (res.ok) {
         const data = await res.json();
@@ -748,6 +749,15 @@ function AudiensView({ niche, audience, platform, userPlan, weeks, preSelectedHo
           )}
         </div>
 
+        {/* Size selector */}
+        <div className="mb-3">
+          <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1.5">Ukuran</p>
+          <div className="flex gap-2">
+            <button onClick={() => setImageSize("1024x1792")} className={`flex-1 py-2 rounded-lg text-xs font-medium border transition ${imageSize === "1024x1792" ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground"}`}>9:16 Story</button>
+            <button onClick={() => setImageSize("1024x1024")} className={`flex-1 py-2 rounded-lg text-xs font-medium border transition ${imageSize === "1024x1024" ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground"}`}>1:1 Feed</button>
+          </div>
+        </div>
+
         {/* Generate button */}
         <Button onClick={generate} disabled={loading || !imagePreview || !selectedHook} className="w-full h-10 text-sm font-semibold text-primary-foreground" style={{ background: "var(--gradient-hero)" }}>
           {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Sparkles className="h-4 w-4 mr-2" />}
@@ -774,7 +784,18 @@ function AudiensView({ niche, audience, platform, userPlan, weeks, preSelectedHo
         <Card className="p-4 border-border/40">
           <div className="flex items-center justify-between mb-3">
             <p className="text-xs font-semibold">Hasil ✨</p>
-            <Button variant="outline" size="sm" className="h-7 text-[10px]" onClick={downloadImage}>📥 Download</Button>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" className="h-7 text-[10px]" onClick={downloadImage}>📥 Download</Button>
+              <Button variant="outline" size="sm" className="h-7 text-[10px]" onClick={async () => {
+                try {
+                  if (navigator.share && outputImage) {
+                    const blob = await (await fetch(outputImage)).blob();
+                    const file = new File([blob], "konten.png", { type: "image/png" });
+                    await navigator.share({ title: selectedHook, text: `${selectedHook}\n\n${allHooks.length > 0 ? "" : ""}`, files: [file] });
+                  } else { toast.error("Share tidak didukung di browser ini"); }
+                } catch { /* user cancelled */ }
+              }}>📤 Share</Button>
+            </div>
           </div>
           <img src={outputImage} alt="Generated" className="w-full rounded-xl shadow-lg" />
         </Card>
