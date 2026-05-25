@@ -64,7 +64,7 @@ export default function DashboardPage() {
         const created = new Date(planRow.created_at);
         const now = new Date();
         const daysUsed = Math.floor((now.getTime() - created.getTime()) / 86400000);
-        setTrialDaysLeft(Math.max(0, 1 - daysUsed));
+        setTrialDaysLeft(Math.max(0, 3 - daysUsed));
       }
       // Load user name
       const { data: { user } } = await supabase.auth.getUser();
