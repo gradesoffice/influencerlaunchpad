@@ -624,6 +624,10 @@ function AudiensView({ niche, audience, platform, userPlan, weeks, preSelectedHo
   const [selectedHook, setSelectedHook] = useState(preSelectedHook || "");
   useEffect(() => { if (preSelectedHook) setSelectedHook(preSelectedHook); }, [preSelectedHook]);
   const [imageSize, setImageSize] = useState<"1024x1792" | "1024x1024">("1024x1792");
+  const [batchDay, setBatchDay] = useState<number>(0);
+  const [batchLoading, setBatchLoading] = useState(false);
+  const [batchResults, setBatchResults] = useState<{ hook: string; image: string }[]>([]);
+  const [batchProgress, setBatchProgress] = useState(0);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [outputImage, setOutputImage] = useState<string | null>(null);
@@ -689,6 +693,36 @@ function AudiensView({ niche, audience, platform, userPlan, weeks, preSelectedHo
     link.href = outputImage;
     link.download = `content-${Date.now()}.png`;
     link.click();
+  };
+
+  // Batch generate all posts for a specific day
+  const batchGenerate = async () => {
+    if (!batchDay) { toast.error("Pilih hari dulu"); return; }
+    // Find posts for selected day across all weeks
+    const postsForDay: { hook: string; slot: string }[] = [];
+    Object.values(weeks).forEach((w: any) => (w?.days || []).forEach((d: any) => {
+      if (d.day === batchDay) (d?.posts || []).forEach((p: any) => { if (p.hook) postsForDay.push({ hook: p.hook, slot: p.slot }); });
+    }));
+    if (postsForDay.length === 0) { toast.error("Tidak ada konten di hari itu"); return; }
+    const toGenerate = postsForDay.slice(0, 10); // max 10
+    setBatchLoading(true); setBatchResults([]); setBatchProgress(0);
+    const results: { hook: string; image: string }[] = [];
+    const { data: { session } } = await supabase.auth.getSession();
+    for (let i = 0; i < toGenerate.length; i++) {
+      setBatchProgress(i + 1);
+      try {
+        const res = await fetch("/api/image-enhance", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}) },
+          body: JSON.stringify({ hook: toGenerate[i].hook, imageBase64: imagePreview || "placeholder", size: imageSize }),
+        });
+        if (res.ok) { const data = await res.json(); if (data.image) results.push({ hook: toGenerate[i].hook, image: data.image }); }
+      } catch {}
+    }
+    setBatchResults(results);
+    setBatchLoading(false);
+    if (results.length > 0) toast.success(`${results.length} gambar berhasil di-generate!`);
+    else toast.error("Gagal generate. Cek credit/API key.");
   };
 
   if (userPlan !== "business") {
@@ -800,6 +834,42 @@ function AudiensView({ niche, audience, platform, userPlan, weeks, preSelectedHo
           <img src={outputImage} alt="Generated" className="w-full rounded-xl shadow-lg" />
         </Card>
       )}
+
+      {/* Batch Generate */}
+      <Card className="p-4 border-border/40">
+        <p className="text-sm font-bold mb-1">Batch Generate</p>
+        <p className="text-[10px] text-muted-foreground mb-3">Pilih hari → AI generate semua gambar konten hari itu sekaligus (max 10).</p>
+        <div className="flex gap-2 mb-3">
+          <select value={batchDay} onChange={e => setBatchDay(Number(e.target.value))} className="flex-1 h-9 rounded-md border border-input bg-background px-3 text-xs">
+            <option value={0}>— Pilih hari —</option>
+            {(() => {
+              const days: { day: number; count: number }[] = [];
+              Object.values(weeks).forEach((w: any) => (w?.days || []).forEach((d: any) => {
+                if (d?.posts?.length) days.push({ day: d.day, count: d.posts.length });
+              }));
+              return days.slice(0, 30).map(d => <option key={d.day} value={d.day}>Day {d.day} ({d.count} konten)</option>);
+            })()}
+          </select>
+          <Button onClick={batchGenerate} disabled={batchLoading || !batchDay} size="sm" className="h-9 px-4 bg-violet-600 hover:bg-violet-700 text-white">
+            {batchLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : "Generate All"}
+          </Button>
+        </div>
+        {batchLoading && <div className="mb-3">
+          <div className="flex justify-between text-[10px] text-muted-foreground mb-1"><span>Generating...</span><span>{batchProgress}/{Math.min(10, batchDay ? 10 : 0)}</span></div>
+          <div className="h-2 rounded-full bg-muted overflow-hidden"><div className="h-full bg-violet-500 transition-all" style={{ width: `${batchProgress * 10}%` }} /></div>
+        </div>}
+        {batchResults.length > 0 && <div className="grid grid-cols-2 gap-2">
+          {batchResults.map((r, i) => (
+            <div key={i} className="relative group">
+              <img src={r.image} alt={r.hook} className="w-full rounded-lg aspect-[9/16] object-cover" />
+              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition rounded-lg flex flex-col items-center justify-center gap-2 p-2">
+                <p className="text-[9px] text-white text-center line-clamp-2">{r.hook}</p>
+                <button onClick={() => { const link = document.createElement("a"); link.href = r.image; link.download = `batch-${i}.png`; link.click(); }} className="text-[10px] bg-white text-black px-3 py-1 rounded-full font-medium">📥 Download</button>
+              </div>
+            </div>
+          ))}
+        </div>}
+      </Card>
 
       {/* Credit info */}
       <Card className="p-4 border-border/40">
