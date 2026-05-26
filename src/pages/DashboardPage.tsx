@@ -205,7 +205,7 @@ export default function DashboardPage() {
       <Toaster richColors position="top-center" />
 
       {/* Sidebar - icon focused */}
-      <aside className="hidden md:flex w-16 flex-col items-center border-r border-border bg-white py-5 sticky top-0 h-screen">
+      <aside className="hidden lg:flex w-16 flex-col items-center border-r border-border bg-white py-5 sticky top-0 h-screen">
         <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center mb-6"><Rocket className="h-5 w-5 text-primary" /></div>
         <nav className="space-y-2 flex-1">
           <SideIcon icon={<Home className="h-5 w-5" />} active={activeNav === "home"} onClick={() => setActiveNav("home")} tooltip="Overview" />
@@ -483,7 +483,7 @@ export default function DashboardPage() {
       </main>
 
       {/* Mobile bottom nav - clean */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-lg border-t border-border/50 px-4 py-2 z-20">
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-lg border-t border-border/50 px-4 py-2 z-20">
         <div className="flex items-center justify-around">
           <button onClick={() => setActiveNav("home")} className={`p-2 rounded-xl transition ${activeNav === "home" ? "text-primary bg-primary/10" : "text-muted-foreground"}`}><Home className="h-5 w-5" /></button>
           <button onClick={() => setActiveNav("konten")} className={`p-2 rounded-xl transition ${activeNav === "konten" ? "text-primary bg-primary/10" : "text-muted-foreground"}`}><FileText className="h-5 w-5" /></button>
@@ -492,7 +492,7 @@ export default function DashboardPage() {
           <button onClick={() => tryProFeature("insight")} className={`p-2 rounded-xl transition ${activeNav === "insight" ? "text-primary bg-primary/10" : "text-muted-foreground"}`}><Lightbulb className="h-5 w-5" /></button>
         </div>
       </div>
-      <div className="md:hidden h-40" />
+      <div className="lg:hidden h-40" />
 
       {/* Paywall Card */}
       {showPaywall && <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
