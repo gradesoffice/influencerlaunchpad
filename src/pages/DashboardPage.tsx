@@ -61,14 +61,26 @@ export default function DashboardPage() {
   useEffect(() => { loadFromDb(); }, []);
   const loadFromDb = async () => {
     try {
-      const { data: strats } = await supabase.from("strategies").select("*").order("created_at", { ascending: false }).limit(1);
+      // Check if user selected a specific brand
+      const activeBrandId = localStorage.getItem("ila_active_brand");
+      let strats;
+      if (activeBrandId) {
+        const { data } = await supabase.from("strategies").select("*").eq("id", activeBrandId).limit(1);
+        strats = data;
+        // Fallback to latest if brand not found
+        if (!strats?.length) { const { data: fallback } = await supabase.from("strategies").select("*").order("created_at", { ascending: false }).limit(1); strats = fallback; }
+      } else {
+        const { data } = await supabase.from("strategies").select("*").order("created_at", { ascending: false }).limit(1);
+        strats = data;
+      }
       if (strats?.length) {
         const s = strats[0]; setStrategyId(s.id); setStrategy({ brand: s.brand as any, phases: s.phases as any });
+        localStorage.setItem("ila_active_brand", s.id); // remember active brand
         setForm({ niche: s.niche, platform: s.platform, audience: s.audience, message: s.message, conversionGoal: s.conversion_goal, tone: s.tone || "", postsPerDay: s.posts_per_day, initialFollowers: (typeof s.initial_followers === "object" && s.initial_followers) ? s.initial_followers as Record<string, number> : { [s.platform]: 0 }, platforms: s.platform ? s.platform.split(",").map((p: string) => p.trim()) : ["Instagram"] });
         const { data: savedWeeks } = await supabase.from("weeks").select("week_number, data").eq("strategy_id", s.id);
         if (savedWeeks) { const m: Record<number, WeekPlan> = {}; savedWeeks.forEach(w => m[w.week_number] = w.data as any); setWeeks(m); }
-        const { data: savedFb } = await supabase.from("feedback").select("week_number, day, slot, likes, comments, messages, conversions, note, reach, posted_at, platform").eq("strategy_id", s.id);
-        if (savedFb?.length) { const m: Record<string, Feedback> = {}; savedFb.forEach(f => m[`${f.week_number}|${f.day}|${f.slot}|${f.platform || "instagram"}`] = { ...f, platform: f.platform || "instagram" }); setFeedback(m); }
+        const { data: savedFb } = await (supabase.from("feedback") as any).select("week_number, day, slot, likes, comments, messages, conversions, note, reach, posted_at, platform").eq("strategy_id", s.id);
+        if (savedFb?.length) { const m: Record<string, Feedback> = {}; savedFb.forEach((f: any) => m[`${f.week_number}|${f.day}|${f.slot}|${f.platform || "instagram"}`] = { ...f, platform: f.platform || "instagram" }); setFeedback(m); }
       } else { /* no strategy — will show empty state in dashboard */ }
       // Load user plan
       const { data: planRow } = await supabase.from("user_plans").select("plan, expires_at, created_at").limit(1).single();
@@ -635,6 +647,7 @@ function FormView({ form, update, loading, onGenerate, onLogout, onDeleteAccount
   const maxBrands = userPlan === "business" ? 5 : userPlan === "pro" ? 1 : 1;
 
   const switchBrand = (id: string) => {
+    localStorage.setItem("ila_active_brand", id);
     window.location.href = "/";
   };
 
