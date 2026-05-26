@@ -148,7 +148,7 @@
   }
 
   html {
-    font-size: 17px;
+    font-size: 19px;
   }
 
   @media (min-width: 1024px) {
@@ -160,5 +160,16 @@
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Bigger touch targets on mobile */
+  @media (max-width: 1023px) {
+    button, a, select, input {
+      min-height: 44px;
+    }
+    .rounded-xl, .rounded-2xl {
+      padding: 1.25rem;
+    }
   }
 }
