@@ -84,6 +84,24 @@ export default function DashboardPage() {
   const update = <K extends keyof FormState>(k: K, v: FormState[K]) => setForm(s => ({ ...s, [k]: v }));
   const getAuthHeaders = async () => { const { data: { session } } = await supabase.auth.getSession(); const h: Record<string, string> = { "Content-Type": "application/json" }; if (session?.access_token) h["Authorization"] = `Bearer ${session.access_token}`; return h; };
   const handleLogout = async () => { await supabase.auth.signOut(); navigate("/login"); };
+  const handleDeleteAccount = async () => {
+    if (!confirm("HAPUS AKUN?\n\nSemua data (strategi, konten, feedback) akan dihapus permanen. Tidak bisa dikembalikan.\n\nYakin?")) return;
+    if (!confirm("Benar-benar yakin? Ketik OK di prompt berikutnya.")) return;
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      // Delete all user data
+      await (supabase.from("feedback") as any).delete().eq("user_id", user.id);
+      await (supabase.from("weeks") as any).delete().eq("user_id", user.id);
+      await (supabase.from("strategies") as any).delete().eq("user_id", user.id);
+      await (supabase.from("user_plans") as any).delete().eq("user_id", user.id);
+      await (supabase.from("usage_logs") as any).delete().eq("user_id", user.id);
+      await (supabase.from("image_credits") as any).delete().eq("user_id", user.id);
+      await supabase.auth.signOut();
+      toast.success("Akun dihapus.");
+      navigate("/login");
+    } catch { toast.error("Gagal hapus. Hubungi admin."); }
+  };
 
   // Paywall trigger - show after 3 clicks for free users
   const checkPaywall = () => {
@@ -177,7 +195,7 @@ export default function DashboardPage() {
   const conversionRate = totalReach > 0 ? ((totalConversions / totalReach) * 100).toFixed(2) : "0";
 
   if (initialLoading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
-  if (showForm) return <FormView form={form} update={update} loading={loadingStrategy} onGenerate={generateStrategy} onLogout={handleLogout} onBack={strategy ? () => setShowForm(false) : undefined} userPlan={userPlan} onShowPricing={() => setShowPricing(true)} />;
+  if (showForm) return <FormView form={form} update={update} loading={loadingStrategy} onGenerate={generateStrategy} onLogout={handleLogout} onDeleteAccount={handleDeleteAccount} onBack={strategy ? () => setShowForm(false) : undefined} userPlan={userPlan} onShowPricing={() => setShowPricing(true)} />;
 
   // Empty state — no strategy but show dashboard shell
   const emptyState = !strategy;
@@ -560,7 +578,7 @@ function PricingModal({ onClose, onUpgrade }: { onClose: () => void; onUpgrade: 
   );
 }
 
-function FormView({ form, update, loading, onGenerate, onLogout, onBack, userPlan, onShowPricing }: { form: FormState; update: <K extends keyof FormState>(k: K, v: FormState[K]) => void; loading: boolean; onGenerate: () => void; onLogout: () => void; onBack?: () => void; userPlan: string; onShowPricing: () => void }) {
+function FormView({ form, update, loading, onGenerate, onLogout, onDeleteAccount, onBack, userPlan, onShowPricing }: { form: FormState; update: <K extends keyof FormState>(k: K, v: FormState[K]) => void; loading: boolean; onGenerate: () => void; onLogout: () => void; onDeleteAccount: () => void; onBack?: () => void; userPlan: string; onShowPricing: () => void }) {
   const [brands, setBrands] = useState<{ id: string; niche: string; platform: string }[]>([]);
   const [loadingBrands, setLoadingBrands] = useState(true);
 
@@ -624,6 +642,11 @@ function FormView({ form, update, loading, onGenerate, onLogout, onBack, userPla
             <div className="grid grid-cols-2 gap-2">{form.platforms.map(p => <div key={p} className="flex items-center gap-2"><span className="text-xs w-16 truncate">{p}</span><Input type="number" min={0} value={form.initialFollowers[p.toLowerCase()] || 0} onChange={e => update("initialFollowers", { ...form.initialFollowers, [p.toLowerCase()]: parseInt(e.target.value) || 0 })} className="h-8 text-xs" /></div>)}</div>
           </div>}
           <Button onClick={onGenerate} disabled={loading} size="lg" className="h-12 text-base font-semibold text-primary-foreground mt-2" style={{ background: "var(--gradient-hero)" }}>{loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <><Rocket className="mr-2 h-5 w-5" />Generate Roadmap</>}</Button>
+        </div>
+
+        {/* Delete Account */}
+        <div className="mt-12 pt-6 border-t border-border">
+          <button onClick={onDeleteAccount} className="text-xs text-rose-400 hover:text-rose-600 transition">Hapus Akun & Semua Data</button>
         </div>
       </div>
     </div>
