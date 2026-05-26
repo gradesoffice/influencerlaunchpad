@@ -41,6 +41,14 @@ export default function DashboardPage() {
   const [clickCount, setClickCount] = useState(0);
   const [showPaywall, setShowPaywall] = useState(false);
   const [preSelectedHook, setPreSelectedHook] = useState("");
+  const [installPrompt, setInstallPrompt] = useState<any>(null);
+  const [showInstallBanner, setShowInstallBanner] = useState(false);
+
+  useEffect(() => {
+    const handler = (e: any) => { e.preventDefault(); setInstallPrompt(e); setShowInstallBanner(true); };
+    window.addEventListener("beforeinstallprompt", handler);
+    return () => window.removeEventListener("beforeinstallprompt", handler);
+  }, []);
 
   useEffect(() => { loadFromDb(); }, []);
   const loadFromDb = async () => {
@@ -318,6 +326,13 @@ export default function DashboardPage() {
                     <p className="text-xs text-muted-foreground mt-2">melalui <strong>{currentTheme}</strong></p>
                   </> : <h2 className="text-lg font-bold">Setiap konten adalah langkah maju.</h2>}
                 </div>
+
+                {/* Install App Banner */}
+                {showInstallBanner && <button onClick={async () => { if (installPrompt) { installPrompt.prompt(); const result = await installPrompt.userChoice; if (result.outcome === "accepted") setShowInstallBanner(false); } }} className="w-full rounded-xl bg-gradient-to-r from-primary to-violet-600 p-4 text-left flex items-center gap-3 text-white">
+                  <div className="h-10 w-10 rounded-lg bg-white/20 flex items-center justify-center shrink-0"><Rocket className="h-5 w-5" /></div>
+                  <div className="flex-1"><p className="text-sm font-bold">Install App</p><p className="text-[10px] opacity-80">Pasang di HP biar lebih cepat & gampang.</p></div>
+                  <ChevronRight className="h-5 w-5 opacity-60" />
+                </button>}
 
                 {/* TODAY'S CONTENT - SLIDE CARDS */}
                 <div className="space-y-3">
