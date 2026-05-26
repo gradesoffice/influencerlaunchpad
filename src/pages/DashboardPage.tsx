@@ -163,8 +163,11 @@ export default function DashboardPage() {
     try {
       await navigator.clipboard.writeText(text);
       setCopiedKey(key);
-      toast.success("Disalin!");
+      toast.success("Disalin! Sekarang posting ya.");
       setTimeout(() => setCopiedKey(null), 2000);
+      // Mark as copied in localStorage (persists across refreshes)
+      const copiedPosts = JSON.parse(localStorage.getItem("ila_copied_posts") || "[]");
+      if (!copiedPosts.includes(key)) { copiedPosts.push(key); localStorage.setItem("ila_copied_posts", JSON.stringify(copiedPosts)); }
       // Record timestamp as posted_at
       if (strategyId) {
         const [w, d, ...s] = key.split("|");
@@ -335,13 +338,20 @@ export default function DashboardPage() {
               }
               const currentWeekData = weeks[targetWeek];
 
-              // Check which posts are "completed" (has feedback)
+              // Check which posts are "completed" (copied OR has feedback)
               const isPostDone = (idx: number) => {
                 if (idx < 0 || idx >= todayPosts.length) return false;
                 const post = todayPosts[idx];
                 const fkey = `${targetWeek}|${targetDayNum}|${post.slot}`;
-                return Object.keys(feedback).some(k => k.startsWith(fkey));
+                // Done if: has any feedback entry OR was copied (posted_at set)
+                const hasFb = Object.keys(feedback).some(k => k.startsWith(fkey));
+                // Also check localStorage for copied posts
+                const copiedPosts = JSON.parse(localStorage.getItem("ila_copied_posts") || "[]");
+                return hasFb || copiedPosts.includes(fkey);
               };
+
+              // All posts done?
+              const allPostsDone = todayPosts.length > 0 && todayPosts.every((_: any, i: number) => isPostDone(i));
 
               return <>
                 {/* Greeting */}
@@ -366,21 +376,40 @@ export default function DashboardPage() {
                   <p className="text-sm text-muted-foreground text-center -mt-2">Copy & posting satu per satu. Isi feedback sebelum lanjut.</p>
                   
                   {todayPosts.length > 0 ? <>
-                    {todayPosts.map((post: any, i: number) => {
-                      const fkey = `${targetWeek}|${targetDayNum}|${post.slot}`;
-                      const prevDone = i === 0 ? true : isPostDone(i - 1);
-                      const isLocked = !prevDone;
+                    {allPostsDone ? (
+                      <div className="rounded-2xl bg-gradient-to-br from-emerald-50 to-green-50 border border-emerald-200 p-8 text-center">
+                        <p className="text-4xl mb-3">🎉</p>
+                        <h3 className="text-lg font-bold text-emerald-800">SELESAI!</h3>
+                        <p className="text-sm text-emerald-700 mt-2">Semua konten hari ini sudah kamu posting. Keren banget!</p>
+                        <p className="text-xs text-emerald-600 mt-3">Besok ada konten baru lagi. Istirahat dulu ya.</p>
+                      </div>
+                    ) : (
+                      todayPosts.map((post: any, i: number) => {
+                        const fkey = `${targetWeek}|${targetDayNum}|${post.slot}`;
+                        const prevDone = i === 0 ? true : isPostDone(i - 1);
+                        const thisDone = isPostDone(i);
+                        const isLocked = !prevDone;
 
-                      if (isLocked) {
-                        return <div key={i} className="rounded-xl bg-muted/30 p-4 opacity-40 pointer-events-none select-none">
-                          <div className="flex items-center gap-2 mb-1"><Badge variant="secondary" className="text-[9px] border-0">{post.format}</Badge><span className="text-[9px] text-muted-foreground">Konten {i + 1}</span></div>
-                          <p className="text-sm font-medium text-muted-foreground">🔒 Selesaikan konten sebelumnya dulu</p>
-                          <p className="text-[10px] text-muted-foreground mt-1">Copy + isi feedback konten di atas untuk unlock.</p>
-                        </div>;
-                      }
+                        // Already done - show collapsed
+                        if (thisDone) {
+                          return <div key={i} className="rounded-xl bg-emerald-50 border border-emerald-200 p-4 flex items-center gap-3">
+                            <Check className="h-5 w-5 text-emerald-500 shrink-0" />
+                            <div className="flex-1 min-w-0"><p className="text-sm font-medium text-emerald-800 line-clamp-1">{post.hook}</p><p className="text-[10px] text-emerald-600">Sudah diposting ✓</p></div>
+                          </div>;
+                        }
 
-                      return <PostCard key={i} post={post} fkey={fkey} wn={targetWeek} day={targetDayNum} copiedKey={copiedKey} openFeedback={openFeedback} feedback={feedback} platforms={form.platforms} onCopy={copyPost} onFeedbackToggle={setOpenFeedback} onFeedbackUpdate={updateFeedback} onProduction={(hook) => { setPreSelectedHook(hook); setActiveNav("audiens"); }} />;
-                    })}
+                        // Locked
+                        if (isLocked) {
+                          return <div key={i} className="rounded-xl bg-muted/30 p-4 opacity-40 pointer-events-none select-none">
+                            <div className="flex items-center gap-2 mb-1"><Badge variant="secondary" className="text-[9px] border-0">{post.format}</Badge><span className="text-[9px] text-muted-foreground">Konten {i + 1}</span></div>
+                            <p className="text-sm font-medium text-muted-foreground">🔒 Selesaikan konten sebelumnya dulu</p>
+                          </div>;
+                        }
+
+                        // Active - show full card
+                        return <PostCard key={i} post={post} fkey={fkey} wn={targetWeek} day={targetDayNum} copiedKey={copiedKey} openFeedback={openFeedback} feedback={feedback} platforms={form.platforms} onCopy={copyPost} onFeedbackToggle={setOpenFeedback} onFeedbackUpdate={updateFeedback} onProduction={(hook) => { setPreSelectedHook(hook); setActiveNav("audiens"); }} />;
+                      })
+                    )}
                   </> : <div className="rounded-xl bg-muted/30 p-6 text-center">
                     <p className="text-sm text-muted-foreground mb-4">{Object.keys(weeks).length > 0 ? "Semua konten sudah selesai! 🎉" : "Belum ada konten. Klik tombol di bawah untuk generate."}</p>
                     {Object.keys(weeks).length === 0 && strategy && (() => {
