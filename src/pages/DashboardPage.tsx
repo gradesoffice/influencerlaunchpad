@@ -1526,6 +1526,26 @@ function AnalitikInline({ strategyId }: { strategyId: string | null }) {
         <Card className="p-4 border-border/40"><div className="flex items-center justify-between mb-1"><ShoppingCart className="h-3.5 w-3.5 text-emerald-400" /><p className="text-[9px] text-muted-foreground uppercase tracking-wide">Pembeli</p></div><p className="text-2xl font-bold">{totals.conversions}</p><p className="text-[9px] text-muted-foreground">jadi beli</p></Card>
       </div>
 
+      {/* Konten yang sudah diposting */}
+      {(() => {
+        const posted = feedbackData.filter((f: any) => f.posted_at);
+        const notTracked = feedbackData.filter((f: any) => f.posted_at && (f.likes || 0) + (f.comments || 0) + (f.messages || 0) + (f.conversions || 0) + (f.reach || 0) === 0);
+        return <>
+          <Card className="p-4 border-border/40">
+            <div className="flex items-center gap-2 mb-3"><Check className="h-4 w-4 text-emerald-500" /><p className="text-sm font-bold">Sudah Diposting</p></div>
+            <p className="text-3xl font-bold text-emerald-600">{posted.length}</p>
+            <p className="text-xs text-muted-foreground mt-1">konten sudah kamu copy & posting</p>
+          </Card>
+
+          {notTracked.length > 0 && <Card className="p-4 border-border/40 border-amber-200 bg-amber-50/30">
+            <div className="flex items-center gap-2 mb-2"><Activity className="h-4 w-4 text-amber-500" /><p className="text-sm font-bold text-amber-800">Belum Diisi Tracking</p></div>
+            <p className="text-2xl font-bold text-amber-600">{notTracked.length}</p>
+            <p className="text-xs text-amber-700 mt-1">konten sudah diposting tapi belum diisi hasilnya (likes, reach, dll).</p>
+            <p className="text-xs text-amber-800 font-semibold mt-2">⚠️ Kalau ga diisi, AI ga bisa bantu analisis mana yang bagus & jelek.</p>
+          </Card>}
+        </>;
+      })()}
+
       {/* Burnout */}
       <Card className="p-4 border-border/40">
         <div className="flex items-center gap-2 mb-3"><Activity className="h-4 w-4 text-rose-500" /><p className="text-xs font-semibold">Kamu Masih Semangat?</p></div>
