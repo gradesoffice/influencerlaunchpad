@@ -41,7 +41,7 @@ export default function DashboardPage() {
 
   // Apply font size to html element
   useEffect(() => {
-    const sizes = { sm: "15px", md: "17px", lg: "19px", xl: "22px" };
+    const sizes = { sm: "18px", md: "20px", lg: "22px", xl: "25px" };
     document.documentElement.style.fontSize = sizes[fontSize];
     localStorage.setItem("ila_fontsize", fontSize);
   }, [fontSize]);
