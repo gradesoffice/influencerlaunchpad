@@ -606,7 +606,7 @@ function FormView({ form, update, loading, onGenerate, onLogout, onDeleteAccount
     <div className="min-h-screen bg-[#faf9f7] p-6">
       <Toaster richColors position="top-center" />
       <div className="mx-auto max-w-lg">
-        <div className="flex items-center justify-between mb-8"><div className="flex items-center gap-2 font-bold"><Rocket className="h-5 w-5 text-primary" />Launchpad</div><div className="flex items-center gap-3"><a href="/" className="text-xs text-primary font-medium">← Dashboard</a><button onClick={onLogout} className="text-xs text-muted-foreground">Logout</button></div></div>
+        <div className="flex items-center justify-between mb-8"><div className="flex items-center gap-2 font-bold"><Rocket className="h-5 w-5 text-primary" />Postora</div><div className="flex items-center gap-3"><a href="/" className="text-xs text-primary font-medium">← Dashboard</a><button onClick={onLogout} className="text-xs text-muted-foreground">Logout</button></div></div>
 
         {/* Brand list */}
         {brands.length > 0 && <div className="mb-6">

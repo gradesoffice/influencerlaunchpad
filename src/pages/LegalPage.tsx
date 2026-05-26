@@ -17,7 +17,7 @@ export default function LegalPage() {
           <p className="text-xs text-muted-foreground">Terakhir diperbarui: Mei 2026</p>
           <div className="space-y-2 text-sm text-muted-foreground">
             <p><strong className="text-foreground">Data yang kami kumpulkan:</strong> Nama, email (dari Google OAuth), data strategi konten yang Anda buat, dan metrik performa yang Anda input secara manual.</p>
-            <p><strong className="text-foreground">Penggunaan data:</strong> Data digunakan semata-mata untuk menyediakan layanan Influencer Launchpad — generate strategi, analitik, dan insight AI. Kami tidak menjual data Anda ke pihak ketiga.</p>
+            <p><strong className="text-foreground">Penggunaan data:</strong> Data digunakan semata-mata untuk menyediakan layanan Postora — generate strategi, analitik, dan insight AI. Kami tidak menjual data Anda ke pihak ketiga.</p>
             <p><strong className="text-foreground">Penyimpanan:</strong> Data disimpan di Supabase (infrastruktur cloud) dengan enkripsi standar industri. Screenshot pembayaran disimpan di storage terenkripsi.</p>
             <p><strong className="text-foreground">AI Processing:</strong> Data brand dan konten Anda diproses oleh AI (Google Gemini) untuk menghasilkan strategi dan insight. Data tidak digunakan untuk training model AI.</p>
             <p><strong className="text-foreground">Cookies:</strong> Kami menggunakan cookies untuk autentikasi sesi login. Tidak ada tracking cookies pihak ketiga selain Meta Pixel untuk keperluan iklan.</p>
@@ -31,7 +31,7 @@ export default function LegalPage() {
           <h2 className="text-lg font-bold">Terms of Service</h2>
           <p className="text-xs text-muted-foreground">Terakhir diperbarui: Mei 2026</p>
           <div className="space-y-2 text-sm text-muted-foreground">
-            <p><strong className="text-foreground">Layanan:</strong> Influencer Launchpad adalah platform SaaS yang membantu content creator membuat strategi konten menggunakan AI. Kami menyediakan tools, bukan jaminan hasil.</p>
+            <p><strong className="text-foreground">Layanan:</strong> Postora adalah platform SaaS yang membantu content creator membuat strategi konten menggunakan AI. Kami menyediakan tools, bukan jaminan hasil.</p>
             <p><strong className="text-foreground">Akun:</strong> Anda bertanggung jawab atas keamanan akun Google yang digunakan untuk login. Satu akun per individu/bisnis.</p>
             <p><strong className="text-foreground">Pembayaran:</strong> Pembayaran dilakukan via transfer bank/e-wallet. Plan aktif setelah verifikasi admin (maksimal 1x24 jam). Garansi uang kembali 7 hari jika tidak puas.</p>
             <p><strong className="text-foreground">Penggunaan yang dilarang:</strong> Dilarang menggunakan platform untuk konten ilegal, SARA, penipuan, atau spam. Pelanggaran mengakibatkan penonaktifan akun tanpa refund.</p>

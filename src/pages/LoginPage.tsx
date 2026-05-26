@@ -22,7 +22,7 @@ export default function LoginPage() {
 
       {/* Nav */}
       <nav className="mx-auto max-w-6xl px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-2 font-bold"><div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center"><Rocket className="h-4 w-4 text-primary" /></div><span className="text-sm">Influencer Launchpad</span></div>
+        <div className="flex items-center gap-2 font-bold"><div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center"><Rocket className="h-4 w-4 text-primary" /></div><span className="text-sm">Postora</span></div>
         <div className="hidden md:flex items-center gap-6 text-sm text-muted-foreground">
           <a href="#fitur">Fitur</a><a href="#manfaat">Manfaat</a><Link to="/pricing">Harga</Link><a href="#testimoni">Testimoni</a>
         </div>
@@ -102,7 +102,7 @@ export default function LoginPage() {
               </div>
             </div>
             <div id="testimoni" className="grid gap-4">
-              <Card className="p-5"><p className="text-sm italic text-muted-foreground mb-3">"Influencer Launchpad bantu aku merapikan konten, konten lebih terstruktur. Dalam 1 bulan, engagement Reels-ku naik 25% karena ikutan saran AI-nya!"</p><div className="flex items-center gap-3"><div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold text-primary">N</div><div><p className="text-sm font-medium">Nadia Rahma</p><p className="text-xs text-muted-foreground">Content Creator · ⭐⭐⭐⭐⭐</p></div></div></Card>
+              <Card className="p-5"><p className="text-sm italic text-muted-foreground mb-3">"Postora bantu aku merapikan konten, konten lebih terstruktur. Dalam 1 bulan, engagement Reels-ku naik 25% karena ikutan saran AI-nya!"</p><div className="flex items-center gap-3"><div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold text-primary">N</div><div><p className="text-sm font-medium">Nadia Rahma</p><p className="text-xs text-muted-foreground">Content Creator · ⭐⭐⭐⭐⭐</p></div></div></Card>
               <Card className="p-5"><p className="text-sm italic text-muted-foreground mb-3">"Tim kami handle 4 brand sekaligus pakai Business plan. Semua roadmap & analytics terpisah per brand. Game changer!"</p><div className="flex items-center gap-3"><div className="h-8 w-8 rounded-full bg-violet-100 flex items-center justify-center text-xs font-bold text-violet-600">D</div><div><p className="text-sm font-medium">Dimas Pratama</p><p className="text-xs text-muted-foreground">Digital Marketing Agency · ⭐⭐⭐⭐⭐</p></div></div></Card>
             </div>
           </div>
@@ -121,7 +121,7 @@ export default function LoginPage() {
 
       {/* Footer */}
       <footer className="border-t border-border py-8 text-center text-sm text-muted-foreground space-y-2">
-        <p>&copy; 2026 Influencer Launchpad. All rights reserved.</p>
+        <p>&copy; 2026 Postora. All rights reserved.</p>
         <a href="/legal" className="text-xs text-primary hover:underline">Privacy Policy & Terms of Service</a>
       </footer>
     </div>
