@@ -1691,9 +1691,42 @@ function PostCard({ post, fkey, wn, day, copiedKey, openFeedback, feedback, plat
   const isCopied = copiedKey === fkey;
   const fbOpen = openFeedback === fkey;
 
+  // Posting time logic
+  const postingTime = (post as any).postingTime as string | undefined;
+  const [timeNow, setTimeNow] = useState(new Date());
+  useEffect(() => { const t = setInterval(() => setTimeNow(new Date()), 1000); return () => clearInterval(t); }, []);
+  
+  const isPostingTime = (() => {
+    if (!postingTime) return true; // no time set = always allowed
+    const [h, m] = postingTime.split(":").map(Number);
+    const target = new Date(timeNow);
+    target.setHours(h, m, 0, 0);
+    const diff = target.getTime() - timeNow.getTime();
+    return diff <= 0; // time has passed = ok to post
+  })();
+
+  const countdown = (() => {
+    if (!postingTime || isPostingTime) return null;
+    const [h, m] = postingTime.split(":").map(Number);
+    const target = new Date(timeNow);
+    target.setHours(h, m, 0, 0);
+    if (target < timeNow) target.setDate(target.getDate() + 1); // next day
+    const diff = target.getTime() - timeNow.getTime();
+    const hh = Math.floor(diff / 3600000);
+    const mm = Math.floor((diff % 3600000) / 60000);
+    const ss = Math.floor((diff % 60000) / 1000);
+    return `${String(hh).padStart(2,"0")}:${String(mm).padStart(2,"0")}:${String(ss).padStart(2,"0")}`;
+  })();
+
   return (
     <div className="rounded-2xl bg-white p-5 mb-3 shadow-md border border-border/40">
-      <div className="flex items-center gap-2 mb-2"><Badge variant="secondary" className="text-[10px] font-semibold border-0 px-2.5 py-0.5">{post.format}</Badge><span className="text-[10px] text-muted-foreground">Konten {day - (wn-1)*7 > 0 ? day - (wn-1)*7 : day}</span></div>
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2"><Badge variant="secondary" className="text-[10px] font-semibold border-0 px-2.5 py-0.5">{post.format}</Badge><span className="text-[10px] text-muted-foreground">Konten {day - (wn-1)*7 > 0 ? day - (wn-1)*7 : day}</span></div>
+        {postingTime && <div className={`text-right ${isPostingTime ? "text-emerald-600" : "text-amber-600"}`}>
+          <p className="text-xs font-bold tabular-nums">{isPostingTime ? `✅ ${postingTime}` : countdown}</p>
+          <p className="text-[9px]">{isPostingTime ? "Waktunya posting!" : `Posting jam ${postingTime}`}</p>
+        </div>}
+      </div>
       <p className="text-base font-bold leading-snug mb-2">{post.hook}</p>
       <p className="text-sm text-muted-foreground">{post.caption}</p>
       <p className="text-sm mt-2"><strong>CTA:</strong> {post.cta}</p>
@@ -1702,7 +1735,7 @@ function PostCard({ post, fkey, wn, day, copiedKey, openFeedback, feedback, plat
       
       {/* Action buttons - ALWAYS VISIBLE & PROMINENT */}
       <div className="flex gap-2 mt-4 pt-3 border-t border-border/30">
-        <button onClick={(e) => { e.stopPropagation(); onCopy(fkey, post); }} className={`flex-1 py-2.5 rounded-xl text-sm font-bold text-center transition ${isCopied ? "bg-emerald-500 text-white" : "bg-primary text-white hover:bg-primary/90"}`}>{isCopied ? "✓ Tersalin!" : "📋 Copy"}</button>
+        <button onClick={(e) => { e.stopPropagation(); if (!isPostingTime) { toast.error(`Belum waktunya. Posting jam ${postingTime}`); return; } onCopy(fkey, post); }} className={`flex-1 py-2.5 rounded-xl text-sm font-bold text-center transition ${isCopied ? "bg-emerald-500 text-white" : isPostingTime ? "bg-primary text-white hover:bg-primary/90" : "bg-muted text-muted-foreground cursor-not-allowed"}`}>{isCopied ? "✓ Tersalin!" : isPostingTime ? "📋 Copy" : `⏰ ${countdown}`}</button>
         <button onClick={(e) => { e.stopPropagation(); onFeedbackToggle(fbOpen ? null : fkey); }} className={`flex-1 py-2.5 rounded-xl text-sm font-bold text-center transition ${fbOpen ? "bg-amber-500 text-white" : "bg-amber-100 text-amber-800 hover:bg-amber-200"}`}>📊 Track</button>
         {onProduction && <button onClick={(e) => { e.stopPropagation(); onProduction(post.hook); }} className="py-2.5 px-4 rounded-xl text-sm font-bold bg-violet-100 text-violet-700 hover:bg-violet-200 transition">🎨</button>}
       </div>
