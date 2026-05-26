@@ -37,6 +37,14 @@ export default function DashboardPage() {
   const [activeNav, setActiveNav] = useState("home");
   const [userPlan, setUserPlan] = useState<"free" | "pro" | "business">("free");
   const [userName, setUserName] = useState("");
+  const [fontSize, setFontSize] = useState<"sm" | "md" | "lg" | "xl">(() => (localStorage.getItem("ila_fontsize") as any) || "lg");
+
+  // Apply font size to html element
+  useEffect(() => {
+    const sizes = { sm: "15px", md: "17px", lg: "19px", xl: "22px" };
+    document.documentElement.style.fontSize = sizes[fontSize];
+    localStorage.setItem("ila_fontsize", fontSize);
+  }, [fontSize]);
   const [trialDaysLeft, setTrialDaysLeft] = useState(1);
   const [clickCount, setClickCount] = useState(0);
   const [showPaywall, setShowPaywall] = useState(false);
@@ -195,7 +203,7 @@ export default function DashboardPage() {
   const conversionRate = totalReach > 0 ? ((totalConversions / totalReach) * 100).toFixed(2) : "0";
 
   if (initialLoading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
-  if (showForm) return <FormView form={form} update={update} loading={loadingStrategy} onGenerate={generateStrategy} onLogout={handleLogout} onDeleteAccount={handleDeleteAccount} onBack={strategy ? () => setShowForm(false) : undefined} userPlan={userPlan} onShowPricing={() => setShowPricing(true)} />;
+  if (showForm) return <FormView form={form} update={update} loading={loadingStrategy} onGenerate={generateStrategy} onLogout={handleLogout} onDeleteAccount={handleDeleteAccount} onBack={strategy ? () => setShowForm(false) : undefined} userPlan={userPlan} onShowPricing={() => setShowPricing(true)} fontSize={fontSize} setFontSize={setFontSize} />;
 
   // Empty state — no strategy but show dashboard shell
   const emptyState = !strategy;
@@ -578,7 +586,7 @@ function PricingModal({ onClose, onUpgrade }: { onClose: () => void; onUpgrade: 
   );
 }
 
-function FormView({ form, update, loading, onGenerate, onLogout, onDeleteAccount, onBack, userPlan, onShowPricing }: { form: FormState; update: <K extends keyof FormState>(k: K, v: FormState[K]) => void; loading: boolean; onGenerate: () => void; onLogout: () => void; onDeleteAccount: () => void; onBack?: () => void; userPlan: string; onShowPricing: () => void }) {
+function FormView({ form, update, loading, onGenerate, onLogout, onDeleteAccount, onBack, userPlan, onShowPricing, fontSize, setFontSize }: { form: FormState; update: <K extends keyof FormState>(k: K, v: FormState[K]) => void; loading: boolean; onGenerate: () => void; onLogout: () => void; onDeleteAccount: () => void; onBack?: () => void; userPlan: string; onShowPricing: () => void; fontSize: string; setFontSize: (s: any) => void }) {
   const [brands, setBrands] = useState<{ id: string; niche: string; platform: string }[]>([]);
   const [loadingBrands, setLoadingBrands] = useState(true);
 
@@ -644,8 +652,20 @@ function FormView({ form, update, loading, onGenerate, onLogout, onDeleteAccount
           <Button onClick={onGenerate} disabled={loading} size="lg" className="h-12 text-base font-semibold text-primary-foreground mt-2" style={{ background: "var(--gradient-hero)" }}>{loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <><Rocket className="mr-2 h-5 w-5" />Generate Roadmap</>}</Button>
         </div>
 
+        {/* Font Size Setting */}
+        <div className="mt-8 pt-6 border-t border-border">
+          <p className="text-sm font-bold mb-3">Ukuran Teks</p>
+          <div className="grid grid-cols-4 gap-2">
+            {([["sm", "Kecil"], ["md", "Sedang"], ["lg", "Besar"], ["xl", "Sangat Besar"]] as const).map(([key, label]) => (
+              <button key={key} onClick={() => setFontSize(key)} className={`py-3 rounded-xl text-center transition font-medium ${fontSize === key ? "bg-primary text-white" : "bg-muted text-muted-foreground"}`}>
+                <span className={key === "sm" ? "text-xs" : key === "md" ? "text-sm" : key === "lg" ? "text-base" : "text-lg"}>{label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Delete Account */}
-        <div className="mt-12 pt-6 border-t border-border">
+        <div className="mt-8 pt-6 border-t border-border">
           <button onClick={onDeleteAccount} className="text-xs text-rose-400 hover:text-rose-600 transition">Hapus Akun & Semua Data</button>
         </div>
       </div>
