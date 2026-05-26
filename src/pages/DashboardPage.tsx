@@ -427,9 +427,8 @@ export default function DashboardPage() {
 
                     <PostCard post={currentPost.post} fkey={fkey} wn={currentPost.week} day={currentPost.day} copiedKey={copiedKey} openFeedback={openFeedback} feedback={feedback} platforms={form.platforms} onCopy={(k, p) => { copyPost(k, p); setTimeout(advancePost, 1500); }} onFeedbackToggle={setOpenFeedback} onFeedbackUpdate={updateFeedback} onProduction={(hook) => { setPreSelectedHook(hook); setActiveNav("audiens"); }} />
 
-                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <div className="text-center text-xs text-muted-foreground">
                       <span>{currentIdx + 1} / {allPosts.length}</span>
-                      <button onClick={advancePost} className="text-primary font-medium">Skip →</button>
                     </div>
                   </div>;
                 })()}
