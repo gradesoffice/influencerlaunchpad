@@ -188,7 +188,7 @@ export default function DashboardPage() {
           const updated = { ...cur, posted_at: new Date().toISOString() };
           setFeedback(f => ({ ...f, [key]: updated }));
           supabase.auth.getSession().then(({ data: { session } }) => {
-            if (session?.user) supabase.from("feedback").upsert({ strategy_id: strategyId, user_id: session.user.id, week_number: Number(w), day: Number(d), slot: s.join("|"), ...updated, updated_at: new Date().toISOString() }, { onConflict: "strategy_id,week_number,day,slot" });
+            if (session?.user) (supabase.from("feedback") as any).upsert({ strategy_id: strategyId, user_id: session.user.id, week_number: Number(w), day: Number(d), slot: s.join("|"), likes: updated.likes, comments: updated.comments, messages: updated.messages, conversions: updated.conversions, reach: updated.reach || 0, note: updated.note || "", posted_at: updated.posted_at, platform: updated.platform || "instagram", updated_at: new Date().toISOString() }, { onConflict: "strategy_id,week_number,day,slot,platform" });
           });
         }
       }
@@ -510,15 +510,39 @@ export default function DashboardPage() {
                         {!done && <Sparkles className="h-4 w-4 text-primary/50 shrink-0" />}
                       </button>
 
-                      {isOpen && weeks[wn] && <div className="mt-2 space-y-2 pl-12">
-                        {weeks[wn].days.map((d, di) => (
-                          <div key={di}>
+                      {isOpen && weeks[wn] && <div className="mt-2 space-y-3 pl-4">
+                        {weeks[wn].days.map((d, di) => {
+                          // Check if previous day is fully done
+                          const prevDay = di > 0 ? weeks[wn].days[di - 1] : null;
+                          const prevDayDone = !prevDay || prevDay.posts.every(p => {
+                            const fk = `${wn}|${prevDay.day}|${p.slot}`;
+                            const copiedPosts = JSON.parse(localStorage.getItem("ila_copied_posts") || "[]");
+                            return Object.keys(feedback).some(k => k.startsWith(fk)) || copiedPosts.includes(fk);
+                          });
+                          const dayInWeek = d.day - (wn - 1) * 7;
+                          const dayDone = d.posts.every(p => {
+                            const fk = `${wn}|${d.day}|${p.slot}`;
+                            const copiedPosts = JSON.parse(localStorage.getItem("ila_copied_posts") || "[]");
+                            return Object.keys(feedback).some(k => k.startsWith(fk)) || copiedPosts.includes(fk);
+                          });
+
+                          if (!prevDayDone) {
+                            return <div key={di} className="rounded-xl bg-muted/20 p-3 opacity-50">
+                              <p className="text-xs font-semibold text-muted-foreground">🔒 Day {dayInWeek} — Selesaikan hari sebelumnya dulu</p>
+                            </div>;
+                          }
+
+                          return <div key={di} className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <div className={`h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${dayDone ? "bg-emerald-500 text-white" : "bg-primary/10 text-primary"}`}>{dayDone ? "✓" : dayInWeek}</div>
+                              <p className="text-xs font-semibold">Day {dayInWeek} {dayDone ? "✅" : ""}</p>
+                            </div>
                             {d.posts.map((post, pi2) => {
                               const fkey = `${wn}|${d.day}|${post.slot}`;
                               return <PostCard key={pi2} post={post} fkey={fkey} wn={wn} day={d.day} copiedKey={copiedKey} openFeedback={openFeedback} feedback={feedback} platforms={form.platforms} onCopy={copyPost} onFeedbackToggle={setOpenFeedback} onFeedbackUpdate={updateFeedback} onProduction={(hook) => { setPreSelectedHook(hook); setActiveNav("audiens"); }} />;
                             })}
-                          </div>
-                        ))}
+                          </div>;
+                        })}
                       </div>}
                     </div>
                   );
