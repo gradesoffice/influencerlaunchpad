@@ -178,8 +178,8 @@ export default function DashboardPage() {
       toast.success("Disalin! Sekarang posting ya.");
       setTimeout(() => setCopiedKey(null), 2000);
       // Mark as copied in localStorage (persists across refreshes)
-      const copiedPosts = JSON.parse(localStorage.getItem("ila_copied_posts") || "[]");
-      if (!copiedPosts.includes(key)) { copiedPosts.push(key); localStorage.setItem("ila_copied_posts", JSON.stringify(copiedPosts)); }
+      const copiedPosts = JSON.parse(localStorage.getItem(`ila_copied_${strategyId || "default"}`) || "[]");
+      if (!copiedPosts.includes(key)) { copiedPosts.push(key); localStorage.setItem(`ila_copied_${strategyId || "default"}`, JSON.stringify(copiedPosts)); }
       // Record timestamp as posted_at
       if (strategyId) {
         const [w, d, ...s] = key.split("|");
@@ -358,7 +358,7 @@ export default function DashboardPage() {
                 // Done if: has any feedback entry OR was copied (posted_at set)
                 const hasFb = Object.keys(feedback).some(k => k.startsWith(fkey));
                 // Also check localStorage for copied posts
-                const copiedPosts = JSON.parse(localStorage.getItem("ila_copied_posts") || "[]");
+                const copiedPosts = JSON.parse(localStorage.getItem(`ila_copied_${strategyId || "default"}`) || "[]");
                 return hasFb || copiedPosts.includes(fkey);
               };
 
@@ -419,7 +419,7 @@ export default function DashboardPage() {
                     </div>;
                   }
 
-                  if (savedIdx >= allPosts.length) {
+                  if (savedIdx >= allPosts.length && allPosts.length > 0) {
                     return <div className="space-y-3">
                       <h2 className="text-xl font-bold text-center">KONTEN SAAT INI</h2>
                       <div className="rounded-2xl bg-gradient-to-br from-emerald-50 to-green-50 border border-emerald-200 p-8 text-center">
@@ -516,13 +516,13 @@ export default function DashboardPage() {
                           const prevDay = di > 0 ? weeks[wn].days[di - 1] : null;
                           const prevDayDone = !prevDay || prevDay.posts.every(p => {
                             const fk = `${wn}|${prevDay.day}|${p.slot}`;
-                            const copiedPosts = JSON.parse(localStorage.getItem("ila_copied_posts") || "[]");
+                            const copiedPosts = JSON.parse(localStorage.getItem(`ila_copied_${strategyId || "default"}`) || "[]");
                             return Object.keys(feedback).some(k => k.startsWith(fk)) || copiedPosts.includes(fk);
                           });
                           const dayInWeek = d.day - (wn - 1) * 7;
                           const dayDone = d.posts.every(p => {
                             const fk = `${wn}|${d.day}|${p.slot}`;
-                            const copiedPosts = JSON.parse(localStorage.getItem("ila_copied_posts") || "[]");
+                            const copiedPosts = JSON.parse(localStorage.getItem(`ila_copied_${strategyId || "default"}`) || "[]");
                             return Object.keys(feedback).some(k => k.startsWith(fk)) || copiedPosts.includes(fk);
                           });
 
