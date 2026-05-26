@@ -148,13 +148,7 @@
   }
 
   html {
-    font-size: 19px;
-  }
-
-  @media (min-width: 1024px) {
-    html {
-      font-size: 16px;
-    }
+    font-size: 16px;
   }
 
   body {
@@ -163,13 +157,91 @@
     -webkit-tap-highlight-color: transparent;
   }
 
-  /* Bigger touch targets on mobile */
+  /* Mobile-first: larger everything for 35+ audience */
   @media (max-width: 1023px) {
-    button, a, select, input {
-      min-height: 44px;
+    /* Typography scale for mature audience */
+    h1, h2, .text-xl, .text-2xl {
+      font-size: 1.5rem !important; /* 24px - header */
+      line-height: 1.4 !important;
     }
+    h3, .text-lg {
+      font-size: 1.25rem !important; /* 20px - sub-header */
+      line-height: 1.4 !important;
+    }
+    .text-base, .text-sm, p {
+      font-size: 1rem !important; /* 16px - body */
+      line-height: 1.5 !important;
+    }
+    .text-xs, .text-\[10px\], .text-\[11px\], .text-\[9px\] {
+      font-size: 0.8125rem !important; /* 13px - caption minimum */
+      line-height: 1.45 !important;
+    }
+    .text-\[8px\] {
+      font-size: 0.75rem !important; /* 12px absolute minimum */
+    }
+
+    /* Bigger icons */
+    .h-4.w-4, .h-3\.5.w-3\.5 {
+      width: 1.25rem !important;
+      height: 1.25rem !important;
+    }
+    .h-5.w-5 {
+      width: 1.5rem !important;
+      height: 1.5rem !important;
+    }
+    .h-8.w-8 {
+      width: 2.25rem !important;
+      height: 2.25rem !important;
+    }
+
+    /* Touch targets - minimum 48dp */
+    button, a, select, input, [role="button"] {
+      min-height: 48px;
+    }
+
+    /* Bottom nav - 64dp height, 24dp icons */
+    .fixed.bottom-0 {
+      height: 64px;
+      padding-top: 8px;
+      padding-bottom: 8px;
+    }
+    .fixed.bottom-0 .h-5.w-5 {
+      width: 1.5rem !important;
+      height: 1.5rem !important;
+    }
+    .fixed.bottom-0 .p-2 {
+      padding: 0.75rem !important;
+    }
+
+    /* Cards more spacious */
     .rounded-xl, .rounded-2xl {
       padding: 1.25rem;
+    }
+    .p-4 {
+      padding: 1.25rem !important;
+    }
+    .p-5 {
+      padding: 1.5rem !important;
+    }
+
+    /* More spacing between elements */
+    .space-y-3 > * + * {
+      margin-top: 1rem !important;
+    }
+    .space-y-5 > * + * {
+      margin-top: 1.5rem !important;
+    }
+    .gap-2 {
+      gap: 0.75rem !important;
+    }
+    .gap-3 {
+      gap: 1rem !important;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    html {
+      font-size: 16px;
     }
   }
 }
