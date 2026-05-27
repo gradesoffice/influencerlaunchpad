@@ -17,7 +17,8 @@ export default function AdminPage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [users, setUsers] = useState<UserRow[]>([]);
   const [processing, setProcessing] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"plans" | "credits" | "stats">("stats");
+  const [activeTab, setActiveTab] = useState<"plans" | "credits" | "stats" | "payments">("stats");
+  const [payments, setPayments] = useState<{ id: string; name: string; plan: string; method: string; amount: string; status: string; date: string }[]>([]);
 
   useEffect(() => { checkAdmin(); }, []);
 
@@ -28,6 +29,9 @@ export default function AdminPage() {
     }
     setIsAdmin(true);
     await loadData();
+    // Load saved payments from localStorage
+    const saved = JSON.parse(localStorage.getItem("ila_payments") || "[]");
+    setPayments(saved.map((p: any, i: number) => ({ ...p, id: String(i), date: p.date ? new Date(p.date).toLocaleDateString("id-ID") : "—" })));
     setLoading(false);
   };
 
@@ -133,6 +137,7 @@ export default function AdminPage() {
           <button onClick={() => setActiveTab("stats")} className={`flex-1 py-2 px-3 rounded-md text-xs font-medium transition ${activeTab === "stats" ? "bg-white shadow-sm" : "text-muted-foreground"}`}><BarChart3 className="h-3.5 w-3.5 inline mr-1.5" />Laporan</button>
           <button onClick={() => setActiveTab("plans")} className={`flex-1 py-2 px-3 rounded-md text-xs font-medium transition ${activeTab === "plans" ? "bg-white shadow-sm" : "text-muted-foreground"}`}><Crown className="h-3.5 w-3.5 inline mr-1.5" />Plans</button>
           <button onClick={() => setActiveTab("credits")} className={`flex-1 py-2 px-3 rounded-md text-xs font-medium transition ${activeTab === "credits" ? "bg-white shadow-sm" : "text-muted-foreground"}`}><CreditCard className="h-3.5 w-3.5 inline mr-1.5" />Credits</button>
+          <button onClick={() => setActiveTab("payments")} className={`flex-1 py-2 px-3 rounded-md text-xs font-medium transition ${activeTab === "payments" ? "bg-white shadow-sm" : "text-muted-foreground"}`}>💳 Pay</button>
         </div>
 
         {/* STATS TAB */}
@@ -207,6 +212,29 @@ export default function AdminPage() {
             </div>
           </Card>
         </>}
+
+        {/* PAYMENTS TAB */}
+        {activeTab === "payments" && <>
+          <Card className="p-5">
+            <p className="text-xs font-semibold mb-1">Record Payment</p>
+            <p className="text-[10px] text-muted-foreground mb-3">Catat pembayaran masuk dari user.</p>
+            <PaymentForm onAdd={(p) => setPayments(prev => [p, ...prev])} />
+          </Card>
+          <Card className="p-5">
+            <p className="text-xs font-semibold mb-3">Riwayat ({payments.length})</p>
+            {payments.length === 0 ? <p className="text-xs text-muted-foreground italic">Belum ada record.</p> : <div className="space-y-2 max-h-80 overflow-y-auto">
+              {payments.map((p, i) => (
+                <div key={i} className="rounded-lg bg-muted/30 p-3 flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-bold">{p.name}</p>
+                    <p className="text-[10px] text-muted-foreground">{p.plan} · {p.method} · {p.date}</p>
+                  </div>
+                  <Badge className={p.status === "paid" ? "bg-emerald-500" : "bg-amber-500"}>{p.status === "paid" ? "Paid" : "Pending"}</Badge>
+                </div>
+              ))}
+            </div>}
+          </Card>
+        </>}
       </div>
     </div>
   );
@@ -245,6 +273,61 @@ function CreditForm({ onSubmit, processing }: { onSubmit: (id: string, amount: n
       <Button size="sm" className="h-9 bg-violet-600 hover:bg-violet-700" onClick={() => { if (userId.trim()) onSubmit(userId.trim(), parseInt(amount)); }} disabled={!userId.trim() || processing === userId}>
         {processing === userId ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-4 w-4" />}
       </Button>
+    </div>
+  );
+}
+
+
+function PaymentForm({ onAdd }: { onAdd: (p: { id: string; name: string; plan: string; method: string; amount: string; status: string; date: string }) => void }) {
+  const [name, setName] = useState("");
+  const [plan, setPlan] = useState("pro");
+  const [method, setMethod] = useState("seabank");
+  const [status, setStatus] = useState("paid");
+
+  const submit = () => {
+    if (!name.trim()) { toast.error("Isi nama"); return; }
+    const amounts: Record<string, string> = { pro: "Rp 99.000", business: "Rp 249.000" };
+    onAdd({
+      id: Date.now().toString(),
+      name: name.trim(),
+      plan,
+      method,
+      amount: amounts[plan] || "—",
+      status,
+      date: new Date().toLocaleDateString("id-ID"),
+    });
+    // Save to localStorage
+    const saved = JSON.parse(localStorage.getItem("ila_payments") || "[]");
+    saved.unshift({ name: name.trim(), plan, method, status, date: new Date().toISOString() });
+    localStorage.setItem("ila_payments", JSON.stringify(saved));
+    toast.success("Payment recorded!");
+    setName("");
+  };
+
+  return (
+    <div className="space-y-2">
+      <input value={name} onChange={e => setName(e.target.value)} placeholder="Nama / WA user" className="w-full h-9 rounded-md border border-input bg-background px-3 text-xs" />
+      <div className="flex gap-2">
+        <select value={plan} onChange={e => setPlan(e.target.value)} className="flex-1 h-9 rounded-md border border-input bg-background px-2 text-xs">
+          <option value="pro">Pro (99rb)</option>
+          <option value="business">Business (249rb)</option>
+          <option value="credit_10">Credit 10 (18rb)</option>
+          <option value="credit_30">Credit 30 (39rb)</option>
+          <option value="credit_50">Credit 50 (59rb)</option>
+        </select>
+        <select value={method} onChange={e => setMethod(e.target.value)} className="flex-1 h-9 rounded-md border border-input bg-background px-2 text-xs">
+          <option value="seabank">SeaBank</option>
+          <option value="jago">Bank Jago</option>
+          <option value="emoney">E-money</option>
+        </select>
+      </div>
+      <div className="flex gap-2">
+        <select value={status} onChange={e => setStatus(e.target.value)} className="flex-1 h-9 rounded-md border border-input bg-background px-2 text-xs">
+          <option value="paid">✅ Paid</option>
+          <option value="pending">⏳ Pending</option>
+        </select>
+        <Button onClick={submit} size="sm" className="h-9 px-4">Record</Button>
+      </div>
     </div>
   );
 }
