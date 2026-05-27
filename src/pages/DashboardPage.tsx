@@ -288,201 +288,45 @@ export default function DashboardPage() {
 
           {/* HOME VIEW */}
           {activeNav === "home" && <>
-            {/* Dynamic greeting with today's mission from roadmap */}
             {(() => {
-              const hour = new Date().getHours();
-              const greeting = hour < 11 ? "SELAMAT PAGI" : hour < 15 ? "SELAMAT SIANG" : hour < 19 ? "SELAMAT SORE" : "SELAMAT MALAM";
-              
-              // Find current phase & week theme
-              let currentTheme = "";
-              let currentWeekNum = completedWeeks + 1;
-              let phaseObjective = "";
-              if (strategy) {
-                let offset = 0;
-                for (const phase of strategy.phases) {
-                  for (const theme of phase.weeklyThemes) {
-                    offset++;
-                    if (offset === currentWeekNum) { currentTheme = theme; phaseObjective = phase.objective; break; }
-                  }
-                  if (currentTheme) break;
-                }
-              }
-
-              // Find today's posts - sequential logic: find the NEXT uncompleted day
-              // Start from day 1, find the first day where not all posts have feedback
-              const availableWeekNums = Object.keys(weeks).map(Number).sort((a, b) => a - b);
-              let todayPosts: any[] = [];
-              let targetWeek = 0;
-              let targetDayNum = 1;
-              
-              // Go through weeks sequentially, find first day with incomplete posts
-              for (const wn of availableWeekNums) {
-                const wData = weeks[wn];
-                if (!wData?.days) continue;
-                let found = false;
-                for (const day of wData.days) {
-                  if (!day?.posts?.length) continue;
-                  // Check if ALL posts in this day have feedback
-                  const allDone = day.posts.every((p: any) => {
-                    const fkey = `${wn}|${day.day}|${p.slot}`;
-                    return Object.keys(feedback).some(k => k.startsWith(fkey));
+              const allPosts: { post: any; week: number; day: number; slot: string; idx: number }[] = [];
+              Object.entries(weeks).sort(([a], [b]) => Number(a) - Number(b)).forEach(([wn, wData]: [string, any]) => {
+                (wData?.days || []).forEach((d: any) => {
+                  (d?.posts || []).forEach((p: any) => {
+                    allPosts.push({ post: p, week: Number(wn), day: d.day, slot: p.slot, idx: allPosts.length });
                   });
-                  if (!allDone) {
-                    todayPosts = day.posts;
-                    targetWeek = wn;
-                    targetDayNum = day.day;
-                    found = true;
-                    break;
-                  }
-                }
-                if (found) break;
-              }
-              
-              // If all done, show last day's posts with congrats
-              if (todayPosts.length === 0 && availableWeekNums.length > 0) {
-                const lastWeek = weeks[availableWeekNums[availableWeekNums.length - 1]];
-                if (lastWeek?.days?.length) {
-                  const lastDay = lastWeek.days[lastWeek.days.length - 1];
-                  todayPosts = lastDay?.posts || [];
-                  targetWeek = availableWeekNums[availableWeekNums.length - 1];
-                  targetDayNum = lastDay?.day || 1;
-                }
-              }
-              const currentWeekData = weeks[targetWeek];
+                });
+              });
+              const idxKey = `ila_post_idx_${strategyId || "default"}`;
+              const savedIdx = parseInt(localStorage.getItem(idxKey) || "0");
+              const currentIdx = Math.min(savedIdx, allPosts.length - 1);
+              const currentPost = allPosts[currentIdx];
+              const dayInWeek = currentPost ? currentPost.day - (currentPost.week - 1) * 7 : 0;
+              const advancePost = () => { localStorage.setItem(idxKey, String(currentIdx + 1)); setClickCount(c => c + 1); };
 
-              // Check which posts are "completed" (copied OR has feedback)
-              const isPostDone = (idx: number) => {
-                if (idx < 0 || idx >= todayPosts.length) return false;
-                const post = todayPosts[idx];
-                const fkey = `${targetWeek}|${targetDayNum}|${post.slot}`;
-                // Done if: has any feedback entry OR was copied (posted_at set)
-                const hasFb = Object.keys(feedback).some(k => k.startsWith(fkey));
-                // Also check localStorage for copied posts
-                const copiedPosts = JSON.parse(localStorage.getItem(`ila_copied_${strategyId || "default"}`) || "[]");
-                return hasFb || copiedPosts.includes(fkey);
-              };
-
-              // All posts done?
-              const allPostsDone = todayPosts.length > 0 && todayPosts.every((_: any, i: number) => isPostDone(i));
-
-              return <>
-                {/* Greeting */}
-                <div className="rounded-xl bg-gradient-to-br from-primary/5 via-violet-50 to-amber-50/30 p-5 border border-border/40">
-                  <p className="text-[10px] uppercase tracking-widest text-primary font-bold mb-2">{greeting}</p>
-                  {currentTheme ? <>
-                    <h2 className="text-lg font-bold leading-snug">Hari ini kita <span className="text-primary">{phaseObjective || "bikin konten"}</span></h2>
-                    <p className="text-xs text-muted-foreground mt-2">melalui <strong>{currentTheme}</strong></p>
-                  </> : <h2 className="text-lg font-bold">Setiap konten adalah langkah maju.</h2>}
+              if (allPosts.length === 0) return <div className="space-y-4">
+                <div className="rounded-xl bg-muted/30 p-6 text-center">
+                  <p className="text-sm text-muted-foreground mb-4">Belum ada konten.</p>
+                  {strategy ? (() => { const fp = strategy.phases[0]; return <Button onClick={() => generateWeek(1, fp?.name || "", fp?.weeklyThemes?.[0] || "")} disabled={loadingWeek === 1} className="h-11 text-sm font-bold text-primary-foreground px-6" style={{ background: "var(--gradient-hero)" }}>{loadingWeek === 1 ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Sparkles className="h-4 w-4 mr-2" />}Generate Konten Minggu 1</Button>; })() : <Button onClick={() => setShowForm(true)} className="h-11 text-sm font-bold text-primary-foreground px-6" style={{ background: "var(--gradient-hero)" }}><Sparkles className="h-4 w-4 mr-2" />Buat Strategi Dulu</Button>}
                 </div>
+              </div>;
 
-                {/* Install App Banner */}
-                {showInstallBanner && <button onClick={async () => { if (installPrompt) { installPrompt.prompt(); const result = await installPrompt.userChoice; if (result.outcome === "accepted") setShowInstallBanner(false); } }} className="w-full rounded-xl bg-gradient-to-r from-primary to-violet-600 p-4 text-left flex items-center gap-3 text-white">
-                  <div className="h-10 w-10 rounded-lg bg-white/20 flex items-center justify-center shrink-0"><Rocket className="h-5 w-5" /></div>
-                  <div className="flex-1"><p className="text-sm font-bold">Install App</p><p className="text-[10px] opacity-80">Pasang di HP biar lebih cepat & gampang.</p></div>
-                  <ChevronRight className="h-5 w-5 opacity-60" />
-                </button>}
-
-                {/* TODAY'S CONTENT - ONE AT A TIME */}
-                {(() => {
-                  // Simple approach: flatten ALL posts across all weeks into one list
-                  // Find current position from localStorage
-                  const allPosts: { post: any; week: number; day: number; slot: string; idx: number }[] = [];
-                  Object.entries(weeks).sort(([a], [b]) => Number(a) - Number(b)).forEach(([wn, wData]: [string, any]) => {
-                    (wData?.days || []).forEach((d: any) => {
-                      (d?.posts || []).forEach((p: any) => {
-                        allPosts.push({ post: p, week: Number(wn), day: d.day, slot: p.slot, idx: allPosts.length });
-                      });
-                    });
-                  });
-
-                  const savedIdx = parseInt(localStorage.getItem("ila_post_idx") || "0");
-                  const currentIdx = Math.min(savedIdx, allPosts.length - 1);
-                  const currentPost = allPosts[currentIdx];
-                  const allDone = currentIdx >= allPosts.length - 1 && savedIdx > currentIdx;
-                  const dayInWeek = currentPost ? currentPost.day - (currentPost.week - 1) * 7 : 0;
-
-                  const advancePost = () => {
-                    const next = currentIdx + 1;
-                    localStorage.setItem("ila_post_idx", String(next));
-                    // Force re-render
-                    setClickCount(c => c + 1);
-                  };
-
-                  if (allPosts.length === 0) {
-                    return <div className="space-y-3">
-                      <h2 className="text-xl font-bold text-center">KONTEN SAAT INI</h2>
-                      <div className="rounded-xl bg-muted/30 p-6 text-center">
-                        <p className="text-sm text-muted-foreground mb-4">Belum ada konten. Generate dulu.</p>
-                        {strategy && (() => { const fp = strategy.phases[0]; return <Button onClick={() => generateWeek(1, fp?.name || "", fp?.weeklyThemes?.[0] || "")} disabled={loadingWeek === 1} className="h-11 text-sm font-bold text-primary-foreground px-6" style={{ background: "var(--gradient-hero)" }}>{loadingWeek === 1 ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Sparkles className="h-4 w-4 mr-2" />}Generate Konten Minggu 1</Button>; })()}
-                        {!strategy && <Button onClick={() => setShowForm(true)} className="h-11 text-sm font-bold text-primary-foreground px-6" style={{ background: "var(--gradient-hero)" }}><Sparkles className="h-4 w-4 mr-2" />Buat Strategi Dulu</Button>}
-                      </div>
-                    </div>;
-                  }
-
-                  if (savedIdx >= allPosts.length && allPosts.length > 0) {
-                    return <div className="space-y-3">
-                      <h2 className="text-xl font-bold text-center">KONTEN SAAT INI</h2>
-                      <div className="rounded-2xl bg-gradient-to-br from-emerald-50 to-green-50 border border-emerald-200 p-8 text-center">
-                        <p className="text-4xl mb-3">🎉</p>
-                        <h3 className="text-lg font-bold text-emerald-800">SEMUA SELESAI!</h3>
-                        <p className="text-sm text-emerald-700 mt-2">Kamu sudah posting semua konten. Luar biasa!</p>
-                        <p className="text-xs text-emerald-600 mt-3">Generate minggu berikutnya di tab Konten.</p>
-                      </div>
-                    </div>;
-                  }
-
-                  const fkey = `${currentPost.week}|${currentPost.day}|${currentPost.slot}`;
-
-                  return <div className="space-y-3">
-                    <h2 className="text-xl font-bold text-center">KONTEN SAAT INI</h2>
-                    <p className="text-xs text-muted-foreground text-center">Day {dayInWeek} · Konten {currentIdx + 1} dari {allPosts.length}</p>
-
-                    <PostCard post={currentPost.post} fkey={fkey} wn={currentPost.week} day={currentPost.day} copiedKey={copiedKey} openFeedback={openFeedback} feedback={feedback} platforms={form.platforms} onCopy={(k, p) => { copyPost(k, p); setTimeout(advancePost, 1500); }} onFeedbackToggle={setOpenFeedback} onFeedbackUpdate={updateFeedback} onProduction={(hook) => { setPreSelectedHook(hook); setActiveNav("audiens"); }} />
-
-                    <div className="text-center text-xs text-muted-foreground">
-                      <span>{currentIdx + 1} / {allPosts.length}</span>
-                    </div>
-                  </div>;
-                })()}
-
-                {/* Progress bar */}
-                <div className="rounded-xl bg-white p-4 border border-border/40">
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-xs font-semibold">Minggu {completedWeeks} dari {totalWeeksAvailable}</p>
-                    <p className="text-xs font-bold text-primary">{progressPct}%</p>
-                  </div>
-                  <div className="h-2 rounded-full bg-muted overflow-hidden">
-                    <div className="h-full rounded-full bg-gradient-to-r from-primary to-violet-500 transition-all" style={{ width: `${progressPct}%` }} />
-                  </div>
+              if (savedIdx >= allPosts.length) return <div className="space-y-4">
+                <div className="rounded-2xl bg-gradient-to-br from-emerald-50 to-green-50 border border-emerald-200 p-8 text-center">
+                  <p className="text-4xl mb-3">🎉</p>
+                  <h3 className="text-lg font-bold text-emerald-800">SEMUA SELESAI!</h3>
+                  <p className="text-sm text-emerald-700 mt-2">Generate minggu berikutnya di tab Konten.</p>
                 </div>
+              </div>;
 
-                {/* CTA Cards */}
-                <div className="space-y-3">
-                  <button onClick={() => setActiveNav("analitik")} className="w-full rounded-xl bg-white p-5 border border-border/40 text-left hover:border-primary/30 transition flex items-center gap-4">
-                    <BarChart3 className="h-8 w-8 text-primary shrink-0" />
-                    <div>
-                      <p className="text-base font-bold">Mau Baca Hasil Ngontenmu?</p>
-                      <p className="text-xs text-muted-foreground">Lihat mana yang laris, mana yang sepi.</p>
-                    </div>
-                    <ChevronRight className="h-5 w-5 text-muted-foreground/50 ml-auto shrink-0" />
-                  </button>
-
-                  <button onClick={() => setActiveNav("audiens")} className="w-full rounded-xl bg-white p-5 border border-border/40 text-left hover:border-violet-300 transition flex items-center gap-4">
-                    <Sparkles className="h-8 w-8 text-violet-500 shrink-0" />
-                    <div>
-                      <p className="text-base font-bold">Mau Ciptakan Gambar?</p>
-                      <p className="text-xs text-muted-foreground">Upload foto → AI bikin jadi cantik.</p>
-                    </div>
-                    <ChevronRight className="h-5 w-5 text-muted-foreground/50 ml-auto shrink-0" />
-                  </button>
-                </div>
-
-                {/* Consistency reminder */}
-                <div className="rounded-xl bg-amber-50 border border-amber-200/50 p-4">
-                  <p className="text-xs font-bold text-amber-900">⚡ Jangan lupa kasih feedback setelah posting!</p>
-                  <p className="text-[10px] text-amber-800/80 mt-1">Klik Track di setiap konten. AI belajar dari data kamu.</p>
-                </div>
-              </>;
+              const fkey = `${currentPost.week}|${currentPost.day}|${currentPost.slot}`;
+              return <div className="space-y-4">
+                <div className="flex items-center gap-3"><Rocket className="h-7 w-7 text-primary" /><div><h2 className="text-lg font-bold">Ngonten Sekarang</h2><p className="text-xs text-muted-foreground">Day {dayInWeek} · Konten {currentIdx + 1}/{allPosts.length}</p></div></div>
+                <PostCard post={currentPost.post} fkey={fkey} wn={currentPost.week} day={currentPost.day} copiedKey={copiedKey} openFeedback={openFeedback} feedback={feedback} platforms={form.platforms} onCopy={(k, p) => { copyPost(k, p); setTimeout(advancePost, 1500); }} onFeedbackToggle={setOpenFeedback} onFeedbackUpdate={updateFeedback} onProduction={(hook) => { setPreSelectedHook(hook); setActiveNav("audiens"); }} />
+                <button onClick={() => setActiveNav("analitik")} className="w-full rounded-xl bg-white p-5 border border-border/40 text-left hover:border-primary/30 transition flex items-center gap-4"><BarChart3 className="h-7 w-7 text-primary shrink-0" /><p className="text-base font-bold flex-1">Hasil Ngonten</p><ChevronRight className="h-5 w-5 text-muted-foreground/50 shrink-0" /></button>
+                <button onClick={() => setActiveNav("audiens")} className="w-full rounded-xl bg-white p-5 border border-border/40 text-left hover:border-violet-300 transition flex items-center gap-4"><Sparkles className="h-7 w-7 text-violet-500 shrink-0" /><p className="text-base font-bold flex-1">Ciptakan Gambar</p><ChevronRight className="h-5 w-5 text-muted-foreground/50 shrink-0" /></button>
+                <div className="rounded-xl bg-amber-50 border border-amber-200/50 p-4"><p className="text-xs font-bold text-amber-900">⚡ Jangan lupa kasih feedback setelah posting!</p></div>
+              </div>;
             })()}
           </>}
 

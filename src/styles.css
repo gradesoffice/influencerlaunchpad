@@ -170,9 +170,16 @@
       min-height: 44px;
     }
     .fixed.bottom-0 {
-      height: 64px;
+      height: 72px;
       padding-top: 10px;
       padding-bottom: 10px;
+    }
+    .fixed.bottom-0 button {
+      min-height: 52px;
+    }
+    .fixed.bottom-0 svg {
+      width: 28px !important;
+      height: 28px !important;
     }
   }
 }
