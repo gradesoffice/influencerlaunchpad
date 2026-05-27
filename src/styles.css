@@ -148,12 +148,12 @@
   }
 
   html {
-    font-size: 22px; /* default "Besar" - overridden by JS */
+    font-size: 26px; /* default "Besar" - overridden by JS */
   }
 
   @media (min-width: 1024px) {
     html {
-      font-size: 19px !important; /* desktop */
+      font-size: 23px !important; /* desktop */
     }
   }
 
